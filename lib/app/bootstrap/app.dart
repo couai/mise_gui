@@ -42,7 +42,7 @@ class _MiseGuiAppState extends ConsumerState<MiseGuiApp>
     final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
-      title: 'mise_gui',
+      title: 'DevWorkbench',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),

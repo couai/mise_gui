@@ -138,11 +138,11 @@ static void my_application_activate(GApplication* application) {
   if (use_header_bar) {
     GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
-    gtk_header_bar_set_title(header_bar, "Mise GUI");
+    gtk_header_bar_set_title(header_bar, "DevWorkbench");
     gtk_header_bar_set_show_close_button(header_bar, TRUE);
     gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
   } else {
-    gtk_window_set_title(window, "Mise GUI");
+    gtk_window_set_title(window, "DevWorkbench");
   }
 
   const WindowSize initial_window_size = ResolveInitialWindowSize();
@@ -233,7 +233,7 @@ static void my_application_class_init(MyApplicationClass* klass) {
 static void my_application_init(MyApplication* self) {}
 
 MyApplication* my_application_new() {
-  g_set_application_name("Mise GUI");
+  g_set_application_name("DevWorkbench");
 
   // Set the program name to the application ID, which helps various systems
   // like GTK and desktop environments map this running application to its

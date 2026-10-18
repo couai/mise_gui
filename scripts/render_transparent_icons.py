@@ -20,8 +20,8 @@ from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SVG_PATH = ROOT / "assets/branding/mise_gui_logo.svg"
-BASE_PNG_PATH = ROOT / "assets/branding/mise_gui_logo_1024.png"
+SVG_PATH = ROOT / "assets/branding/dev_workbench_logo.svg"
+BASE_PNG_PATH = ROOT / "assets/branding/dev_workbench_logo_1024.png"
 LINUX_ICON_PATH = ROOT / "linux/runner/resources/app_icon.png"
 WINDOWS_ICO_PATH = ROOT / "windows/runner/resources/app_icon.ico"
 MACOS_APP_ICONSET = ROOT / "macos/Runner/Assets.xcassets/AppIcon.appiconset"

@@ -24,13 +24,13 @@
 #     默认值：mise-gui-notary。
 #
 # 输出产物：
-#   dist/macos/Mise GUI.app
+#   dist/macos/DevWorkbench.app
 set -euo pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/macos_package_common.sh"
 
 FINAL_APP_DIR="$DIST_DIR/${APP_NAME}.app"
-EXTERNAL_OUTPUT_DIR="/Users/likai/Documents/Mise GUI Build"
+EXTERNAL_OUTPUT_DIR="/Users/likai/Documents/DevWorkbench Build"
 EXTERNAL_APP_DIR="$EXTERNAL_OUTPUT_DIR/${APP_NAME}.app"
 TMP_DIR="$(mktemp -d /tmp/mise-gui-app-release.XXXXXX)"
 STAGE_DIR="$TMP_DIR/stage"

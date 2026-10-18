@@ -219,7 +219,8 @@ void main() {
     await pumpMiseGuiApp(tester);
 
     expect(find.text('总览'), findsWidgets);
-    expect(find.text('工具'), findsWidgets);
+    expect(find.text('开发工具'), findsWidgets);
+    expect(find.text('工具版本'), findsWidgets);
     expect(find.text('项目'), findsWidgets);
   });
 

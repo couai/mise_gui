@@ -4,9 +4,9 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mise_gui/app/bootstrap/dependencies.dart';
 import 'package:mise_gui/app/router/app_destination.dart';
@@ -30,6 +30,9 @@ class AppShell extends ConsumerWidget {
       orElse: () => false,
     );
 
+    final needsMise = destination != AppDestination.localTools;
+    final showMissing = isMissingMise && needsMise;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 980;
@@ -44,7 +47,7 @@ class AppShell extends ConsumerWidget {
           appBar: compact
               ? AppBar(
                   title: _WindowChromeDoubleTapRegion(
-                    child: Text(isMissingMise ? '安装 mise' : destination.label),
+                    child: Text(showMissing ? '安装 mise' : destination.label),
                   ),
                   actions: const [
                     Padding(
@@ -61,11 +64,8 @@ class AppShell extends ConsumerWidget {
                     child: _Sidebar(
                       currentIndex: navigationShell.currentIndex,
                       expanded: true,
-                      locked: isMissingMise,
+                      locked: false,
                       onSelect: (index) {
-                        if (isMissingMise) {
-                          return;
-                        }
                         Navigator.of(context).pop();
                         navigationShell.goBranch(index);
                       },
@@ -88,10 +88,12 @@ class AppShell extends ConsumerWidget {
                   child: compact
                       ? _ContentPanel(
                           child: miseAvailableValue.when(
-                            data: (available) => available
+                            data: (available) => available || !needsMise
                                 ? navigationShell
                                 : const _MissingMiseExperience(),
-                            loading: () => const _ShellLoadingView(),
+                            loading: () => needsMise
+                                ? const _ShellLoadingView()
+                                : navigationShell,
                             error: (error, stackTrace) => navigationShell,
                           ),
                         )
@@ -109,20 +111,20 @@ class AppShell extends ConsumerWidget {
                                   _Sidebar(
                                     currentIndex: navigationShell.currentIndex,
                                     expanded: expandedSidebar,
-                                    locked: isMissingMise,
-                                    onSelect: isMissingMise
-                                        ? (_) {}
-                                        : navigationShell.goBranch,
+                                    locked: false,
+                                    onSelect: navigationShell.goBranch,
                                   ),
                                   const SizedBox(width: 20),
                                   Expanded(
                                     child: _ContentPanel(
                                       child: miseAvailableValue.when(
-                                        data: (available) => available
+                                        data: (available) =>
+                                            available || !needsMise
                                             ? navigationShell
                                             : const _MissingMiseExperience(),
-                                        loading: () =>
-                                            const _ShellLoadingView(),
+                                        loading: () => needsMise
+                                            ? const _ShellLoadingView()
+                                            : navigationShell,
                                         error: (error, stackTrace) =>
                                             navigationShell,
                                       ),
@@ -173,182 +175,79 @@ class _Sidebar extends ConsumerWidget {
     required this.locked,
     required this.onSelect,
   });
-
   final int currentIndex;
-  final bool expanded;
-  final bool locked;
+  final bool expanded, locked;
   final ValueChanged<int> onSelect;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppTheme.colorsOf(context);
     final appVersion = ref.watch(appVersionInfoProvider);
-    final sidebarWidth = expanded ? 280.0 : 112.0;
-    final sidebarPadding = expanded ? 18.0 : 12.0;
-    final brandPadding = expanded ? 16.0 : 10.0;
-    final compactBrandSize = expanded ? 92.0 : 54.0;
-
     return SizedBox(
-      width: sidebarWidth,
+      width: expanded ? 212 : 88,
       child: AppPanel(
-        padding: EdgeInsets.all(sidebarPadding),
-        radius: 24,
-        backgroundAlpha: 0.72,
-        borderAlpha: 0.48,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return Column(
-              crossAxisAlignment: expanded
-                  ? CrossAxisAlignment.start
-                  : CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.zero,
-                    child: Column(
-                      crossAxisAlignment: expanded
-                          ? CrossAxisAlignment.start
-                          : CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.fromLTRB(
-                            brandPadding,
-                            brandPadding,
-                            brandPadding,
-                            expanded ? 14 : brandPadding,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: expanded
-                                ? LinearGradient(
-                                    colors: [
-                                      colors.panelRaised.withValues(alpha: 0.2),
-                                      colors.accent.withValues(alpha: 0.07),
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  )
-                                : null,
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: expanded
-                              ? Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const _BrandBadge(size: 92),
-                                    const SizedBox(height: 16),
-                                    const Text(
-                                      'Mise GUI',
-                                      style: TextStyle(
-                                        fontFamily: 'FiraCode',
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      '本地环境统一管理',
-                                      style: TextStyle(color: colors.textMuted),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Text(
-                                      '集中管理常用语言、工具链和项目版本差异。',
-                                      style: TextStyle(
-                                        color: colors.textMuted,
-                                        fontSize: 13,
-                                        height: 1.5,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 14),
-                                    const Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      children: [
-                                        _RuntimePill(label: 'Java'),
-                                        _RuntimePill(label: 'Python'),
-                                        _RuntimePill(label: 'Go'),
-                                        _RuntimePill(label: 'Node'),
-                                        _RuntimePill(label: 'Flutter'),
-                                        _RuntimePill(label: '更多工具链'),
-                                      ],
-                                    ),
-                                    if (locked) ...[
-                                      const SizedBox(height: 14),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 10,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: colors.warning.withValues(
-                                            alpha: 0.12,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            16,
-                                          ),
-                                          border: Border.all(
-                                            color: colors.warning.withValues(
-                                              alpha: 0.26,
-                                            ),
-                                          ),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.lock_outline_rounded,
-                                              size: 16,
-                                              color: colors.warning,
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Expanded(
-                                              child: Text(
-                                                '先安装 mise，左侧导航会自动解锁。',
-                                                style: TextStyle(
-                                                  color: colors.textPrimary,
-                                                  fontSize: 12,
-                                                  height: 1.4,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                )
-                              : Center(
-                                  child: _BrandBadge(size: compactBrandSize),
-                                ),
-                        ),
-                        const SizedBox(height: 20),
-                        for (final destination in AppDestination.values)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: _SidebarDestination(
-                              destination: destination,
-                              expanded: expanded,
-                              selected:
-                                  !locked && currentIndex == destination.index,
-                              locked: locked,
-                              onTap: () => onSelect(destination.index),
-                            ),
-                          ),
-                      ],
+        padding: const EdgeInsets.all(12),
+        radius: 18,
+        backgroundAlpha: .72,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 2),
+              child: Column(
+                crossAxisAlignment: expanded
+                    ? CrossAxisAlignment.start
+                    : CrossAxisAlignment.center,
+                children: [
+                  const _BrandBadge(size: 36),
+                  if (expanded) ...[
+                    const SizedBox(height: 12),
+                    const Text(
+                      'DevWorkbench',
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -.5,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '本地开发工作台',
+                      style: TextStyle(color: colors.textMuted, fontSize: 12),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    for (final destination in AppDestination.values)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: _SidebarDestination(
+                          destination: destination,
+                          expanded: expanded,
+                          selected: currentIndex == destination.index,
+                          locked: false,
+                          onTap: () => onSelect(destination.index),
+                        ),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                _SidebarFooter(
-                  expanded: expanded,
-                  compactWidth: constraints.maxWidth,
-                  versionLabel: appVersion.maybeWhen(
-                    data: (value) => value.shortLabel,
-                    orElse: () => 'v1.0.0',
-                  ),
-                ),
-              ],
-            );
-          },
+              ),
+            ),
+            const SizedBox(height: 16),
+            _SidebarFooter(
+              expanded: expanded,
+              compactWidth: expanded ? 188 : 64,
+              versionLabel: appVersion.maybeWhen(
+                data: (v) => v.shortLabel,
+                orElse: () => 'v1.1.0',
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -433,8 +332,8 @@ class _SidebarDestination extends StatelessWidget {
           hoverColor: locked ? Colors.transparent : colors.hover,
           child: Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: expanded ? 14 : 8,
-              vertical: 14,
+              horizontal: expanded ? 8 : 4,
+              vertical: 10,
             ),
             child: Row(
               mainAxisAlignment: expanded
@@ -443,8 +342,8 @@ class _SidebarDestination extends StatelessWidget {
               children: [
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 220),
-                  width: expanded ? 42 : 40,
-                  height: expanded ? 42 : 40,
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
                     color: selected
                         ? colors.accent.withValues(alpha: 0.18)
@@ -470,7 +369,7 @@ class _SidebarDestination extends StatelessWidget {
                   ),
                 ),
                 if (expanded) ...[
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -674,50 +573,14 @@ class _ToolbarGlassPanel extends StatelessWidget {
 
 class _BrandBadge extends StatelessWidget {
   const _BrandBadge({required this.size});
-
   final double size;
-
   @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: SvgPicture.asset(
-        'assets/branding/mise_gui_logo.svg',
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-      ),
-    );
-  }
-}
-
-class _RuntimePill extends StatelessWidget {
-  const _RuntimePill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppTheme.colorsOf(context);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: colors.panelRaised.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: colors.borderStrong.withValues(alpha: 0.2)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: colors.textPrimary,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.2,
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SvgPicture.asset(
+    'assets/branding/dev_workbench_logo.svg',
+    width: size,
+    height: size,
+    semanticsLabel: 'DevWorkbench',
+  );
 }
 
 class _ShellLoadingView extends StatelessWidget {
@@ -919,7 +782,7 @@ class _MissingHeroText extends StatelessWidget {
         Text('这台电脑还没有安装 mise', style: Theme.of(context).textTheme.displaySmall),
         const SizedBox(height: 14),
         Text(
-          'Mise GUI 依赖可用的 mise CLI 才能读取工具版本、项目覆盖关系和全局配置。先完成安装，右侧这些功能就会自动解锁。',
+          'DevWorkbench 依赖可用的 mise CLI 才能读取工具版本、项目覆盖关系和全局配置。先完成安装，右侧这些功能就会自动解锁。',
           style: TextStyle(color: colors.textMuted, fontSize: 16, height: 1.65),
         ),
         const SizedBox(height: 24),

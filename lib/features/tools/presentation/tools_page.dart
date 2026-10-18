@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:mise_gui/features/local_tools/application/local_tools_provider.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:mise_gui/shared/ui/tool_logo.dart';
@@ -338,6 +339,7 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
       }
 
       ref.invalidate(classifiedVersionsProvider);
+      ref.invalidate(localToolsProvider);
       final success = result.isSuccess;
       final diagnosis = success
           ? null

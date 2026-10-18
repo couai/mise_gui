@@ -1,3 +1,11 @@
+# DevWorkbench fork
+
+DevWorkbench adds a local development tools workbench with category filters, search, installation details and quick opening of applications and directories. Existing mise version management and classified SDK paths remain available. See [implementation scope](docs/dev-workbench.md) and [runtime policy](docs/classified-toolchains.md).
+
+Based on [likaia/mise_gui](https://github.com/likaia/mise_gui); the upstream MIT license and attribution are retained. The public app name is DevWorkbench; the internal package name, bundle identifier and existing `toolchains/mise-gui` settings/history path remain compatible.
+
+---
+
 <p align="center">
   <img src="docs/brand-mark.png" alt="Mise GUI Logo" width="120" height="120">
 </p>

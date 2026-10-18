@@ -1,0 +1,100 @@
+{
+  "android-studio.png": {
+    "source": "/Applications/Android Studio.app/Contents/Resources/studio.icns",
+    "bundle_id": "com.google.android.studio",
+    "version": "2026.2",
+    "sha256": "80c54e5b98c08493378f255ebfb808f319c65800068d13112069a5c90b712f43"
+  },
+  "xcode.png": {
+    "source": "/Applications/Xcode.app/Contents/Resources/Xcode.icns",
+    "bundle_id": "com.apple.dt.Xcode",
+    "version": "27.0",
+    "sha256": "6ea3643985713f41e036c28f6a821f1701eada17db188542165c7c9af3292d79"
+  },
+  "bruno.png": {
+    "source": "/Applications/Bruno.app/Contents/Resources/icon.icns",
+    "bundle_id": "com.usebruno.app",
+    "version": "4.2.1",
+    "sha256": "7db4145e1caef2551979e6e9012d769f9aa0bd59937bff5b8b3a9ea7f2e9f80a"
+  },
+  "reqable.png": {
+    "source": "/Applications/Reqable.app/Contents/Resources/AppIcon.icns",
+    "bundle_id": "com.reqable.macosx",
+    "version": "3.3.1",
+    "sha256": "6e1ed99f7e2e571d3c32efa9362c1cb5ee9a9c50bb01cb093b54144c784014a2"
+  },
+  "mitmproxy.png": {
+    "source": "/Applications/mitmproxy.app/Contents/Resources/icon.icns",
+    "bundle_id": "org.mitmproxy",
+    "version": "0.0.0",
+    "sha256": "3530d5727589c6c9843d664789e871c326967dd40803bdec05438c49293c7659"
+  },
+  "vscode.png": {
+    "source": "/Applications/Visual Studio Code.app/Contents/Resources/Code.icns",
+    "bundle_id": "com.microsoft.VSCode",
+    "version": "1.141.0",
+    "sha256": "f53cf5dab668141e911ccf9ec652332d3b15767b5842fd54b176485d72933a60"
+  },
+  "idea.png": {
+    "source": "/Applications/IntelliJ IDEA.app/Contents/Resources/idea.icns",
+    "bundle_id": "com.jetbrains.intellij",
+    "version": "2026.2.3",
+    "sha256": "71b999f5974e50a35fabc8a98aec7ef5c91785ad5a3cc37a853d4aee95521625"
+  },
+  "datagrip.png": {
+    "source": "/Applications/DataGrip.app/Contents/Resources/datagrip.icns",
+    "bundle_id": "com.jetbrains.datagrip",
+    "version": "2026.2.6",
+    "sha256": "80c1def0a7d6c783a97590e8cf2acef7ab8c879c30ba8b0bac0bf18b054099ef"
+  },
+  "cursor.png": {
+    "source": "/Applications/Cursor.app/Contents/Resources/Cursor.icns",
+    "bundle_id": "com.todesktop.230313mzl4w4u92",
+    "version": "3.24.18",
+    "sha256": "a2d83913831f1002df008fabc91cbfce181a61e79dc0d3237f96c52b813f57a0"
+  },
+  "hbuilderx.png": {
+    "source": "/Applications/HBuilderX.app/Contents/Resources/HBuilder.icns",
+    "bundle_id": "io.dcloud.HBuilderX",
+    "version": "5.26.2026091802",
+    "sha256": "a8c1cd8c1ec3f2ce6d9a1e0f9387e05af78f3725b904c8c23a7f280c50dfb93b"
+  },
+  "jetbrains-toolbox.png": {
+    "source": "/Applications/JetBrains Toolbox.app/Contents/Resources/JB_256.icns",
+    "bundle_id": "com.jetbrains.toolbox",
+    "version": "3.8.1.88030",
+    "sha256": "03ddc0ed8601347d2599bd79b13707b6ce6746544969c2b2417cea64bbf517d3"
+  },
+  "navicat.png": {
+    "source": "/Applications/Navicat Premium.app/Contents/Resources/Navicat Premium.icns",
+    "bundle_id": "com.navicat.NavicatPremium",
+    "version": "17.3.12",
+    "sha256": "b6ea6a23f35bf223079ac8cd4092b99fce3d4646249d7464179d0e0f390cf670"
+  },
+  "maven.png": {
+    "source": "https://maven.apache.org/images/maven-logo-black-on-white.png",
+    "sha256": "ed1e2a584613dd27066d8d43c5817b303de53c796074f605068f9fa7525d1b60"
+  },
+  "uv.svg": {
+    "source": "https://raw.githubusercontent.com/astral-sh/uv/main/docs/assets/logo-letter.svg",
+    "sha256": "fc5aeabf925cbdaba99f4e86635eeef2d47a5ecd715d7994490ef9082fd12bfb"
+  },
+  "gh.svg": {
+    "source": "https://raw.githubusercontent.com/primer/octicons/main/icons/mark-github-24.svg",
+    "sha256": "bce494189797623c34e39a41c2c38a132bdca23ce4e6ac06b70116ed7e91ce26"
+  },
+  "npm.png": {
+    "source": "https://raw.githubusercontent.com/npm/logos/master/npm%20square/n-64.png",
+    "sha256": "3b43683d2fd3842cff04c4e2315e47ff8574ed26c9835e2e634c7da548c300f7"
+  },
+  "devicehub.png": {
+    "source": "/Applications/Xcode.app/Contents/Applications/DeviceHub.app/Contents/Resources/AppIcon.icns",
+    "bundle_id": "com.apple.dt.Devices",
+    "version": "27.0",
+    "sha256": "d67c2125cdd6a65f2d869de6014d8bee73b4df5c975f340ff59f89928b9cfd52"
+  },
+  "pnpm-icon.svg": {
+    "source": "https://raw.githubusercontent.com/pnpm/pnpm.io/main/static/img/pnpm-no-name-with-frame.svg",
+    "sha256": "512e2f89b4994b39cb7b0cd64fda507b95a31b6220f7ba3223d2da4e2113aae8"
+  }
+}

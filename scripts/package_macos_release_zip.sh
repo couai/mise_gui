@@ -28,7 +28,7 @@
 #     默认值：mise-gui-notary。
 #
 # 输出产物：
-#   dist/macos/Mise GUI-macOS-release-YYYY-MM-DD.zip
+#   dist/macos/DevWorkbench-macOS-release-YYYY-MM-DD.zip
 set -euo pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/macos_package_common.sh"

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mise_gui/features/local_tools/presentation/local_tools_page.dart';
 import 'package:mise_gui/features/toolchains/presentation/toolchains_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -34,8 +35,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: AppDestination.localTools.path,
+                builder: (context, state) => const LocalToolsPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: AppDestination.toolchains.path,
-                builder: (context, state) => const ToolchainsPage(),
+                builder: (context, state) => ToolchainsPage(
+                  initialTool: state.uri.queryParameters['tool'],
+                ),
               ),
             ],
           ),

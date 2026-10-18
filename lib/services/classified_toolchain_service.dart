@@ -33,6 +33,7 @@ class ClassifiedToolchainService {
     final result = await process.run(
       MiseCommandRequest(
         arguments: const ['ls', '--json'],
+        timeout: const Duration(seconds: 10),
         workingDirectory: layout.home,
       ),
     );

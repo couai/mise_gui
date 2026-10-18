@@ -18,6 +18,51 @@ class ToolLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const localIcons = {
+      'android-studio': 'android-studio.png',
+      'xcode': 'xcode.png',
+      'bruno': 'bruno.png',
+      'reqable': 'reqable.png',
+      'mitmproxy': 'mitmproxy.png',
+      'vscode': 'vscode.png',
+      'cursor': 'cursor.png',
+      'idea': 'idea.png',
+      'datagrip': 'datagrip.png',
+      'hbuilderx': 'hbuilderx.png',
+      'jetbrains-toolbox': 'jetbrains-toolbox.png',
+      'navicat': 'navicat.png',
+      'maven': 'maven.png',
+      'uv': 'uv.svg',
+      'gh': 'gh.svg',
+      'pnpm': 'pnpm-icon.svg',
+      'npm': 'npm.png',
+      'devicehub': 'devicehub.png',
+    };
+    final local = localIcons[tool];
+    if (local != null) {
+      if (local.endsWith('.svg')) {
+        return SvgPicture.asset(
+          'assets/local_tools/$local',
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+          semanticsLabel: '$tool 官方标识',
+          colorFilter: tool == 'gh'
+              ? ColorFilter.mode(
+                  Theme.of(context).colorScheme.onSurface,
+                  BlendMode.srcIn,
+                )
+              : null,
+        );
+      }
+      return Image.asset(
+        'assets/local_tools/$local',
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        semanticLabel: '$tool 官方应用图标',
+      );
+    }
     if (!tools.contains(tool)) {
       return Icon(Icons.extension_outlined, size: size);
     }

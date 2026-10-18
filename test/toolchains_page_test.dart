@@ -18,7 +18,7 @@ List<ClassifiedVersion> snapshot() {
   final layout = ToolchainLayout.current;
   return [
     for (final entry in {
-      'java': ['temurin-21.0.12.1+1', 'temurin-17.0.20.1+1', 'zulu-8.96.0.205'],
+      'java': ['oracle-21.0.12.1', 'oracle-17.0.20', 'oracle-8.0.503'],
       'node': ['24.21.0'],
       'python': ['3.14.8'],
       'go': ['1.27.2'],
@@ -32,7 +32,7 @@ List<ClassifiedVersion> snapshot() {
           active: version == entry.value.first,
           registeredPath: '${layout.dataDir}/installs/${entry.key}/$version',
           actualPath: entry.key == 'java'
-              ? '${layout.root}/jdk/versions/jdk-${version.replaceFirst('temurin-', '')}/Contents/Home'
+              ? '${layout.root}/jdk/versions/$version/Contents/Home'
               : layout.installTarget(entry.key, version),
           classified: true,
           sourcePath: version == entry.value.first
@@ -80,6 +80,39 @@ void main() {
     }
   });
 
+  testWidgets(
+    'tool deep links select the requested runtime on first entry and later navigation',
+    (tester) async {
+      tester.view.physicalSize = const Size(1640, 1120);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final container = ProviderContainer(
+        overrides: [
+          miseAvailableProvider.overrideWith((ref) async => true),
+          classifiedVersionsProvider.overrideWith((ref) async => snapshot()),
+        ],
+      );
+      addTearDown(container.dispose);
+      final router = container.read(appRouterProvider);
+      router.go('/toolchains?tool=flutter');
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MiseGuiApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('配套 Dart 3.13.5'), findsOneWidget);
+      router.go('/toolchains?tool=rust');
+      await tester.pumpAndSettle();
+      expect(find.text('共享代理位置'), findsOneWidget);
+      expect(find.text('配套 Dart 3.13.5'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    },
+  );
+
   testWidgets('shows classified inventory, scope actions and bundled Dart', (
     tester,
   ) async {
@@ -93,10 +126,10 @@ void main() {
         classifiedVersionsProvider.overrideWith((ref) async => snapshot()),
         appVersionInfoProvider.overrideWith(
           (ref) async => const AppVersionInfo(
-            appName: 'Mise GUI',
+            appName: 'DevWorkbench',
             packageName: 'com.couai.miseGui',
-            version: '1.0.8',
-            buildNumber: '9',
+            version: '1.1.0',
+            buildNumber: '10',
           ),
         ),
       ],

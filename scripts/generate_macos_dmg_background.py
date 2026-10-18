@@ -204,7 +204,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     root = Path(__file__).resolve().parents[1]
-    logo_path = root / "assets" / "branding" / "mise_gui_logo_1024.png"
+    logo_path = root / "assets" / "branding" / "dev_workbench_logo_1024.png"
     output_dir = root / "packaging" / "macos"
 
     if args.output is not None and args.scale is None:

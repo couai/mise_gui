@@ -192,6 +192,39 @@ class _DashboardOverview extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        AppPanel(
+          child: Row(
+            children: [
+              Icon(
+                Icons.widgets_outlined,
+                color: AppTheme.colorsOf(context).accent,
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '本地开发工具',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: 6),
+                    Text('统一查看运行时、构建工具、IDE 和移动开发环境。'),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              OutlinedButton(
+                onPressed: () => context.go('/local-tools'),
+                child: const Text('打开工具工作台'),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
         _DashboardMetricGrid(metrics: snapshot.metrics),
         const SizedBox(height: 28),
         _RecentHistoryPanel(entries: snapshot.recentHistory),

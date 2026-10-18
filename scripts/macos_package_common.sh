@@ -12,7 +12,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_NAME="Mise GUI"
+APP_NAME="DevWorkbench"
 DATE_STAMP="$(date +%F)"
 DIST_DIR="$ROOT_DIR/dist/macos"
 PACKAGING_DIR="$ROOT_DIR/packaging/macos"

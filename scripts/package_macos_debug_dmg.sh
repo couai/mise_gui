@@ -9,7 +9,7 @@
 #   这个脚本也不依赖自定义环境变量。
 #
 # 输出产物：
-#   dist/macos/Mise GUI-macOS-debug-drag-install-YYYY-MM-DD.dmg
+#   dist/macos/DevWorkbench-macOS-debug-drag-install-YYYY-MM-DD.dmg
 set -euo pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/macos_package_common.sh"

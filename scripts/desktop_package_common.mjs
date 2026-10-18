@@ -8,7 +8,7 @@ export const ROOT_DIR = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
 );
-export const APP_DISPLAY_NAME = 'Mise GUI';
+export const APP_DISPLAY_NAME = 'DevWorkbench';
 export const BINARY_NAME = 'mise_gui';
 
 export function dateStamp() {

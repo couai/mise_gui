@@ -2,7 +2,7 @@
 
 ## 目标与边界
 
-在上游 Mise GUI 上增加分类工具链管理，继续以真实 mise CLI 状态为依据。首期覆盖 Java、Node.js、Python、Go、Rust、Flutter；Dart 跟随 Flutter。保留已安装 SDK、别名、全局默认版本和项目配置，不在首次启动时迁移目录。
+在 DevWorkbench（原 Mise GUI fork）中保留分类工具链管理，继续以真实 mise CLI 状态为依据。首期覆盖 Java、Node.js、Python、Go、Rust、Flutter；Dart 跟随 Flutter。保留已安装 SDK、别名、全局默认版本和项目配置，不在首次启动时迁移目录。
 
 本项目使用当前 Flutter 3.47.7 / Dart 3.13.5。GUI 最终部署到 `/Applications`；应用自身配置、状态、日志归入 `$HOME/Developer/toolchains/mise-gui/`。项目代码、构建产物留在项目内。
 
@@ -60,4 +60,4 @@ Rust：设置已有的 RUSTUP_HOME/CARGO_HOME；安装采用 rustup，选择采�
 - 保留上游测试并运行 flutter analyze、flutter test、macOS 构建。
 - 在隔离 mise 配置和临时目录验证实际注册/切换，不为测试修改用户默认版本。
 
-后续再扩展 Android SDK、Xcode、缓存体积统计和更新通知；它们不属于首期运行时安装适配。
+Android SDK、Xcode 等本地工具的识别、详情和快速打开见 [DevWorkbench 工具工作台](dev-workbench.md)。它们不参与运行时安装适配；缓存体积统计、跨工具安装/卸载和更新通知仍未实现。

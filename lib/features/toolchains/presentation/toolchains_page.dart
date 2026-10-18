@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:mise_gui/shared/ui/tool_logo.dart';
+import 'package:mise_gui/features/local_tools/application/local_tools_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mise_gui/app/bootstrap/dependencies.dart';
@@ -28,7 +29,8 @@ const toolchainNames = {
 };
 
 class ToolchainsPage extends ConsumerStatefulWidget {
-  const ToolchainsPage({super.key});
+  const ToolchainsPage({super.key, this.initialTool});
+  final String? initialTool;
   @override
   ConsumerState<ToolchainsPage> createState() => _ToolchainsPageState();
 }
@@ -38,8 +40,27 @@ class _ToolchainsPageState extends ConsumerState<ToolchainsPage> {
   String? selectedVersion;
   bool busy = false;
 
+  @override
+  void initState() {
+    super.initState();
+    if (toolchainNames.containsKey(widget.initialTool)) {
+      selectedTool = widget.initialTool!;
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ToolchainsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialTool != oldWidget.initialTool &&
+        toolchainNames.containsKey(widget.initialTool)) {
+      selectedTool = widget.initialTool!;
+      selectedVersion = null;
+    }
+  }
+
   void refresh() {
     ref.invalidate(classifiedVersionsProvider);
+    ref.invalidate(localToolsProvider);
     ref.invalidate(toolsProvider);
     ref.invalidate(dashboardProvider);
     ref.invalidate(projectsProvider);

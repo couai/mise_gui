@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/brand-mark.png" alt="Mise GUI Logo" width="120" height="120">
+  <img src="assets/branding/dev_workbench_logo_1024.png" alt="DevWorkbench Logo" width="120" height="120">
 </p>
 
 
@@ -14,19 +14,20 @@
   <a href="https://github.com/likaia/mise_gui/releases"><img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-blue.svg?style=flat" alt="platform"></a>
 </p>
 
-# Mise GUI
+# DevWorkbench
 
-一个面向开发者的 mise 可视化管理软件，通过图形化界面快速管理本地工具链版本以及项目内所依赖工具版本。
+本地开发工具工作台：统一识别工具、分类展示、查看详情和快速打开，并保留 mise 的运行时版本管理。
 
-## 此 fork：分类工具链适配
+## 此 fork：工具工作台
 
 基于 [likaia/mise_gui](https://github.com/likaia/mise_gui)，保留 MIT 协议与原作者署名。此分支先适配 macOS 上现有的分类目录和版本管理，使用项目固定的 Flutter 3.47.7；首次启动不会迁移 SDK 或改变全局默认版本。
 
-- 新增“工具链”页面，识别 Java、Node.js、Python、Go、Rust、Flutter；显示真实目录、注册路径和作用域，Dart 跟随 Flutter。
+- 新增“开发工具”工作台，分类识别运行时、包管理器、移动开发、IDE 和网络工具；支持搜索、应用打开、目录定位和路径复制，详情可跳转相应 mise 工具链。
+- “mise 工具链”页面，识别 Java、Node.js、Python、Go、Rust、Flutter；显示真实目录、注册路径和作用域，Dart 跟随 Flutter。
 - 分类安装与全局/项目切换分开，原工具页也接入相同策略。首期保护已有目录，卸载和批量升级暂不开放。
 - 移除 GUI 自身的更新检测、提示与 mise 本体升级入口；开发工具的远端版本查询和分类安装继续保留。
 - 应用配置与历史放在 `$HOME/Developer/toolchains/mise-gui/`。全局配置、缓存和运行时沿用已有 mise 环境。
-- [设计方案与实现思路](docs/classified-toolchains.md) · [实际 Flutter 页面预览](docs/design/README.md)
+- [工具工作台设计与边界](docs/dev-workbench.md) · [分类安装策略](docs/classified-toolchains.md) · [实际 Flutter 页面预览](docs/design/README.md)
 - [代码与上游 Issues 检查记录](docs/bug-audit-2026-10-18.md)
 
 ```sh
@@ -34,7 +35,7 @@ mise exec -- flutter pub get
 mise exec -- flutter run -d macos
 ```
 
-验证使用 `flutter analyze`、`flutter test`、`dart run tool/check_environment.dart`。本机 macOS 构建采用 ad-hoc 签名；公开分发前另行配置签名和公证。
+验证使用 `flutter analyze`、`flutter test`、`dart run tool/check_environment.dart`、`dart run tool/check_local_tools.dart`。本机 macOS 构建采用 ad-hoc 签名；公开分发前另行配置签名和公证。
 
 本地 Release 构建使用 `bash scripts/build_local_macos.sh`，构建后刷新内嵌框架及应用的临时签名并进行校验。
 
