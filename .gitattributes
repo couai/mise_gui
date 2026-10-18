@@ -1,0 +1,3 @@
+# Preserve official SVG artwork byte-for-byte for sources.json verification.
+assets/toolchains/*.svg -text
+assets/toolchains/java.svg whitespace=cr-at-eol
