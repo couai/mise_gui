@@ -5,5 +5,5 @@
 - 目录策略集中在 ToolchainLayout；页面预览和实际执行共用 ClassifiedToolchainService。真实状态由 mise CLI 查询。
 - SDK 安装与版本选择分开；已有目录拒绝覆盖，Rust 共享代理与 rustup 工具链分别处理。
 - 修改操作策略后运行 flutter analyze、flutter test；实际 CLI 测试使用隔离 HOME/MISE 目录，保留用户现有默认版本。
-- macOS 发布前执行 flutter build macos；界面预览生成方式见 docs/design/README.md。
+- macOS 本地 Release 使用 bash scripts/build_local_macos.sh，包含构建及签名校验；界面预览生成方式见 docs/design/README.md。
 - 保留 MIT 许可证与上游署名，upstream 指向 likaia/mise_gui，origin 指向个人 fork。

@@ -37,6 +37,7 @@ flutter test test/toolchains_page_test.dart
 - 静态分析、64 项测试及 macOS Debug / Release 构建通过。测试包含真实 mise 在隔离 HOME、配置和数据目录中的注册、全局切换、项目切换、未知配置段保留，以及安装失败时对并发锁文件的保护。
 - 安装流程验证了命令计划、目标目录保护、软链接越界保护；没有为测试下载或增加新的 SDK 版本。
 - 上游作者的签名团队已移除，本机采用 ad-hoc 签名。公开分发和公证需另外配置签名证书。
+- 本地 Release 入口为 `bash scripts/build_local_macos.sh`，构建后按由内到外的顺序刷新 App.framework 与应用签名，避免增量构建的旧签名造成校验失败。
 - 工具图标使用官方素材，来源、校验值与版权说明见 [素材目录](../../assets/toolchains/README.md)。
 
 应用源码的首期适配针对 macOS；Linux、Windows 构建没有在本机验证。

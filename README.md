@@ -34,6 +34,8 @@ mise exec -- flutter run -d macos
 
 验证使用 `flutter analyze`、`flutter test`、`dart run tool/check_environment.dart`。本机 macOS 构建采用 ad-hoc 签名；公开分发前另行配置签名和公证。
 
+本地 Release 构建使用 `bash scripts/build_local_macos.sh`，构建后刷新内嵌框架及应用的临时签名并进行校验。
+
 以下保留上游项目介绍，部分原版操作在此分支受到首期策略保护。
 
 ![demo-img-1.png](docs/1.png)
