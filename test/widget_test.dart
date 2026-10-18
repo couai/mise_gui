@@ -434,6 +434,7 @@ void main() {
           appUpdateServiceProvider.overrideWithValue(
             const _HasUpdateAppUpdateService(),
           ),
+          appUpdateChecksEnabledProvider.overrideWithValue(true),
           miseCliServiceProvider.overrideWithValue(const MockMiseCliService()),
           historyServiceProvider.overrideWithValue(const MockHistoryService()),
           projectScanServiceProvider.overrideWithValue(

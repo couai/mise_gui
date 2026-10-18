@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:mise_gui/services/toolchain_layout.dart';
 
 import 'package:mise_gui/models/app_models.dart';
 import 'package:mise_gui/services/mise_process_service.dart';
@@ -649,7 +651,7 @@ class LiveMiseCliService implements MiseCliService {
     }
 
     final path = source!.path!;
-    final isGlobal = path.contains('/.config/mise/config.toml');
+    final isGlobal = _isGlobalSourcePath(path);
 
     return [
       ToolProjectImpact(
@@ -728,23 +730,35 @@ class LiveMiseCliService implements MiseCliService {
     _ => '通过 mise 管理的本地开发工具版本。',
   };
 
+  bool _isGlobalSourcePath(String? path) {
+    if (path == null) return false;
+    if (path.contains('/.config/mise/')) return true;
+    try {
+      return File(path).resolveSymbolicLinksSync() ==
+          File(
+            ToolchainLayout.current.globalConfigPath,
+          ).resolveSymbolicLinksSync();
+    } on FileSystemException {
+      return path == ToolchainLayout.current.globalConfigPath;
+    }
+  }
+
   String _formatSource(MiseSourceRef? source) {
     if (source == null) {
       return '未知';
     }
 
     return switch (source.type) {
-      'mise.toml' =>
-        (source.path?.contains('/.config/mise/') ?? false) ? '全局' : '项目',
+      'mise.toml' => _isGlobalSourcePath(source.path) ? '全局' : '项目',
       _ => source.type,
     };
   }
 
   MiseSourceRef? _resolveSourceRefFromLabel(String source) {
     return switch (source) {
-      '全局' => const MiseSourceRef(
+      '全局' => MiseSourceRef(
         type: 'mise.toml',
-        path: '/.config/mise/config.toml',
+        path: ToolchainLayout.current.globalConfigPath,
       ),
       '项目' => const MiseSourceRef(
         type: 'mise.toml',
@@ -759,7 +773,7 @@ class LiveMiseCliService implements MiseCliService {
       return '当前版本来自本地已安装列表，但还没有显式来源信息。';
     }
 
-    if (source!.path!.contains('/.config/mise/')) {
+    if (_isGlobalSourcePath(source!.path!)) {
       return '当前版本由全局 config.toml 或全局 mise.toml 决定，项目未覆盖时会直接继承。';
     }
 
@@ -783,17 +797,15 @@ class LiveMiseCliService implements MiseCliService {
   String _installCommand(String tool, String version) =>
       'mise install $tool@$version';
 
-  String _useCommand(String tool, String version) => 'mise use $tool@$version';
-
   String _useCommandForSource(
     String tool,
     String version,
     MiseSourceRef? source,
   ) {
-    if (source?.path != null && source!.path!.contains('/.config/mise/')) {
+    if (source?.path == null || _isGlobalSourcePath(source!.path)) {
       return 'mise use --global $tool@$version';
     }
-    return _useCommand(tool, version);
+    return 'mise use --path ${quoteArgument('${File(source.path!).parent.path}/mise.toml')} $tool@$version';
   }
 
   String _installAndUseCommandForSource(

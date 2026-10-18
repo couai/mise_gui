@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'package:mise_gui/services/toolchain_layout.dart';
+import 'package:mise_gui/services/classified_toolchain_service.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -60,6 +62,8 @@ final appVersionInfoProvider = FutureProvider<AppVersionInfo>(
   (ref) => ref.watch(appReleaseServiceProvider).load(),
 );
 
+final appUpdateChecksEnabledProvider = Provider<bool>((ref) => false);
+
 final appUpdateServiceProvider = Provider<AppUpdateService>(
   (ref) => const GitHubAppUpdateService(),
 );
@@ -99,8 +103,18 @@ final miseQueryServiceProvider = Provider<MiseQueryService>(
   (ref) => CliMiseQueryService(ref.watch(miseProcessServiceProvider)),
 );
 
+final classifiedToolchainServiceProvider = Provider<ClassifiedToolchainService>(
+  (ref) => ClassifiedToolchainService(
+    ref.watch(miseProcessServiceProvider),
+    ToolchainLayout.current,
+  ),
+);
+
 final miseActionServiceProvider = Provider<MiseActionService>(
-  (ref) => LocalMiseActionService(ref.watch(miseProcessServiceProvider)),
+  (ref) => LocalMiseActionService(
+    ref.watch(miseProcessServiceProvider),
+    policy: ref.watch(classifiedToolchainServiceProvider),
+  ),
 );
 
 final miseSelfUpdateServiceProvider = Provider<MiseSelfUpdateService>(

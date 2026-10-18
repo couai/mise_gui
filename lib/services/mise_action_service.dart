@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:mise_gui/services/toolchain_layout.dart';
+import 'package:mise_gui/services/classified_toolchain_service.dart';
 
 import 'package:mise_gui/services/mise_process_service.dart';
 
@@ -331,10 +333,12 @@ class MiseActionProgressEvent {
 class LocalMiseActionService implements MiseActionService {
   const LocalMiseActionService(
     this._processService, {
+    this.policy,
     MiseLockfileCleaner lockfileCleaner = const MiseLockfileCleaner(),
   }) : _lockfileCleaner = lockfileCleaner;
 
   final MiseProcessService _processService;
+  final ClassifiedToolchainService? policy;
   final MiseLockfileCleaner _lockfileCleaner;
 
   @override
@@ -346,7 +350,8 @@ class LocalMiseActionService implements MiseActionService {
     final commands = <ExecutedMiseCommand>[];
     final lockfileSnapshot = await _lockfileCleaner.capture();
     var lockfileCleanupReport = const MiseLockfileCleanupReport();
-    final scriptCommands = _parseScriptCommands(script);
+    final prepared = policy == null ? script : await policy!.prepare(script);
+    final scriptCommands = _parseScriptCommands(prepared);
 
     for (var index = 0; index < scriptCommands.length; index++) {
       final line = scriptCommands[index];
@@ -357,6 +362,10 @@ class LocalMiseActionService implements MiseActionService {
       }
 
       final arguments = _parseArguments(line.substring(5));
+      if (policy != null && arguments.first == 'install-into') {
+        final spec = arguments[1].split('@');
+        await policy!.layout.checkNewTarget(spec[0], spec[1]);
+      }
       final commandIndex = index + 1;
       onProgress?.call(
         MiseActionProgressEvent(
@@ -369,10 +378,10 @@ class LocalMiseActionService implements MiseActionService {
       final result = await _processService.run(
         MiseCommandRequest(
           arguments: arguments,
-          workingDirectory: workingDirectory,
+          workingDirectory: workingDirectory ?? policy?.layout.home,
           allowNonZeroExit: true,
           preferShellExecution: true,
-          timeout: const Duration(minutes: 6),
+          timeout: const Duration(minutes: 30),
           onOutput: (chunk) {
             onProgress?.call(
               MiseActionProgressEvent(
@@ -408,10 +417,15 @@ class LocalMiseActionService implements MiseActionService {
       );
 
       if (result.exitCode != 0) {
-        lockfileCleanupReport = await _lockfileCleaner.cleanupAfterFailedAction(
-          snapshot: lockfileSnapshot,
-          output: '${result.stdout}\n${result.stderr}',
-        );
+        // Other terminals may be installing in the same mise cache. The
+        // classified manager leaves lock ownership and cleanup to mise itself.
+        if (policy == null) {
+          lockfileCleanupReport = await _lockfileCleaner
+              .cleanupAfterFailedAction(
+                snapshot: lockfileSnapshot,
+                output: '${result.stdout}\n${result.stderr}',
+              );
+        }
         if (lockfileCleanupReport.hasFindings) {
           onProgress?.call(
             MiseActionProgressEvent(
@@ -442,23 +456,5 @@ class LocalMiseActionService implements MiseActionService {
         .toList();
   }
 
-  List<String> _parseArguments(String input) {
-    final matches = RegExp(
-      r'''[^\s"']+|"([^"]*)"|'([^']*)' ''',
-    ).allMatches('$input ').toList();
-    if (matches.isEmpty) {
-      return const <String>[];
-    }
-
-    return matches.map((match) {
-      final full = match.group(0)!.trimRight();
-      if (full.startsWith('"') && full.endsWith('"')) {
-        return full.substring(1, full.length - 1);
-      }
-      if (full.startsWith("'") && full.endsWith("'")) {
-        return full.substring(1, full.length - 1);
-      }
-      return full;
-    }).toList();
-  }
+  List<String> _parseArguments(String input) => parseCommandArguments(input);
 }

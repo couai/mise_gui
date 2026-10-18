@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:mise_gui/services/toolchain_layout.dart';
 
 import 'package:mise_gui/models/app_models.dart';
 
@@ -372,11 +373,7 @@ class LiveConfigService implements ConfigService {
     if (_globalConfigPathOverride case final path?) {
       return path;
     }
-    final home = Platform.environment['HOME'];
-    if (home == null || home.isEmpty) {
-      return '.config/mise/config.toml';
-    }
-    return '$home/.config/mise/config.toml';
+    return ToolchainLayout.current.globalConfigPath;
   }
 
   ConfigRuntimeSettingsData _buildRuntimeSettings({

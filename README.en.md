@@ -15,6 +15,8 @@
 
 # Mise GUI
 
+This fork adds classified toolchain directories and explicit global/project version selection for macOS. It uses Flutter 3.47.7. See the [fork design](docs/classified-toolchains.md) and [rendered UI previews](docs/design/README.md). Existing SDKs and global defaults are preserved; uninstall and bulk upgrade actions are protected in this first phase. The upstream MIT license and attribution are retained.
+
 A visual mise management app for developers, designed to quickly manage local toolchain versions and project-level tool dependencies through a graphical interface.
 
 ![demo-img-1.png](docs/1.png)

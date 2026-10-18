@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:mise_gui/services/toolchain_layout.dart';
 
 const String _shellEnvironmentStartMarker =
     '__MISE_GUI_SHELL_ENVIRONMENT_START__';
@@ -357,7 +358,8 @@ class LocalMiseProcessService implements MiseProcessService {
       return _runProcessWithTimeout(
         executablePath,
         request.arguments,
-        workingDirectory: request.workingDirectory,
+        workingDirectory:
+            request.workingDirectory ?? ToolchainLayout.current.home,
         environment: environment,
         timeout: request.timeout,
         onOutput: request.onOutput,
@@ -373,7 +375,8 @@ class LocalMiseProcessService implements MiseProcessService {
     return _runProcessWithTimeout(
       shellPath,
       ['-ilc', command],
-      workingDirectory: request.workingDirectory,
+      workingDirectory:
+          request.workingDirectory ?? ToolchainLayout.current.home,
       environment: environment,
       timeout: request.timeout,
       onOutput: request.onOutput,
@@ -499,7 +502,7 @@ class LocalMiseProcessService implements MiseProcessService {
 
     final seen = <String>{};
     final candidates = <String>[];
-    for (final entry in rawPath.split(Platform.pathSeparator)) {
+    for (final entry in rawPath.split((Platform.isWindows ? ';' : ':'))) {
       if (entry.isEmpty) {
         continue;
       }
@@ -526,7 +529,7 @@ class LocalMiseProcessService implements MiseProcessService {
       if (value == null || value.isEmpty) {
         return;
       }
-      for (final entry in value.split(Platform.pathSeparator)) {
+      for (final entry in value.split((Platform.isWindows ? ';' : ':'))) {
         if (entry.isEmpty || pathEntries.contains(entry)) {
           continue;
         }
@@ -561,7 +564,20 @@ class LocalMiseProcessService implements MiseProcessService {
     environment.addAll(
       readConfiguredMiseProxyEnvironmentSync(homeDirectory: homeDirectory),
     );
-    environment['PATH'] = pathEntries.join(Platform.pathSeparator);
+    environment['PATH'] = pathEntries.join((Platform.isWindows ? ';' : ':'));
+    final layout = ToolchainLayout.current;
+    environment.putIfAbsent('MISE_CONFIG_DIR', () => layout.configDir);
+    environment.putIfAbsent('MISE_DATA_DIR', () => layout.dataDir);
+    environment.putIfAbsent(
+      'MISE_CACHE_DIR',
+      () => '${layout.root}/mise/cache',
+    );
+    environment.putIfAbsent(
+      'MISE_STATE_DIR',
+      () => '${layout.root}/mise/state',
+    );
+    environment.putIfAbsent('CARGO_HOME', () => layout.cargoHome);
+    environment.putIfAbsent('RUSTUP_HOME', () => layout.rustupHome);
     return environment;
   }
 
@@ -582,9 +598,9 @@ class LocalMiseProcessService implements MiseProcessService {
     final command = [
       "printf '%s\\0' ${_shellEscape(_shellEnvironmentStartMarker)}",
       'env -0',
-      r'status=$?',
+      r'mise_gui_exit_code=$?',
       "printf '%s\\0' ${_shellEscape(_shellEnvironmentEndMarker)}",
-      r'exit $status',
+      r'exit $mise_gui_exit_code',
     ].join('; ');
 
     try {
@@ -832,7 +848,8 @@ String? _globalMiseConfigPath({String? homeDirectory}) {
   if (home == null || home.isEmpty) {
     return null;
   }
-  return '$home/.config/mise/config.toml';
+  if (homeDirectory != null) return '$home/.config/mise/config.toml';
+  return ToolchainLayout.current.globalConfigPath;
 }
 
 String? _extractTomlSection(String? content, String sectionName) {

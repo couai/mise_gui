@@ -79,7 +79,9 @@ class _AppUpdateGateState extends ConsumerState<_AppUpdateGate> {
   }
 
   Future<void> _checkForUpdate() async {
-    if (_checkedForUpdate || !mounted) {
+    if (!ref.read(appUpdateChecksEnabledProvider) ||
+        _checkedForUpdate ||
+        !mounted) {
       return;
     }
 

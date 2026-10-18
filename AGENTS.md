@@ -1,0 +1,9 @@
+# 开发约定
+
+- 使用项目 mise.toml 固定的 Flutter；Dart 随 SDK 配套提供。
+- 分类目录、安装/切换策略、首期边界和验证要求见 [设计方案](docs/classified-toolchains.md)。修改工具链操作、配置路径或界面时先读该文档。
+- 目录策略集中在 ToolchainLayout；页面预览和实际执行共用 ClassifiedToolchainService。真实状态由 mise CLI 查询。
+- SDK 安装与版本选择分开；已有目录拒绝覆盖，Rust 共享代理与 rustup 工具链分别处理。
+- 修改操作策略后运行 flutter analyze、flutter test；实际 CLI 测试使用隔离 HOME/MISE 目录，保留用户现有默认版本。
+- macOS 发布前执行 flutter build macos；界面预览生成方式见 docs/design/README.md。
+- 保留 MIT 许可证与上游署名，upstream 指向 likaia/mise_gui，origin 指向个人 fork。

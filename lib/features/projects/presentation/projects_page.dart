@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:mise_gui/services/toolchain_layout.dart';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
@@ -398,7 +399,7 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage> {
     final paths = <String>{};
     final home = Platform.environment['HOME'];
     if (home != null && home.isNotEmpty) {
-      paths.add('$home/.config/mise/config.toml');
+      paths.add(ToolchainLayout.current.globalConfigPath);
     }
     for (final project in snapshot.projects) {
       paths.add(project.configPath);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mise_gui/features/toolchains/presentation/toolchains_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mise_gui/app/router/app_destination.dart';
@@ -22,6 +23,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return AppShell(navigationShell: navigationShell);
         },
         branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppDestination.toolchains.path,
+                builder: (context, state) => const ToolchainsPage(),
+              ),
+            ],
+          ),
           StatefulShellBranch(
             routes: [
               GoRoute(

@@ -137,4 +137,44 @@ void main() {
     expect(bindings['python']?.projectVersion, '3.12.4');
     expect(bindings['python']?.source, '项目 .tool-versions');
   });
+  test(
+    'discovers Rust toolchain files and Flutter tables without a flat tools section',
+    () async {
+      final root = await Directory.systemTemp.createTemp('mise-project-mixed-');
+      addTearDown(() => root.delete(recursive: true));
+      final rust = Directory('${root.path}/rust-app');
+      final flutter = Directory('${root.path}/flutter-app');
+      await rust.create();
+      await flutter.create();
+      await File(
+        '${rust.path}/rust-toolchain.toml',
+      ).writeAsString('[toolchain]\nchannel = "1.99.0"\n');
+      await File('${flutter.path}/mise.toml').writeAsString(
+        '[tools.flutter]\nversion = "3.47.7"\n[tools.flutter.platforms.macos-arm64]\nurl = "https://example.invalid/flutter.zip"\n',
+      );
+      const service = LiveProjectScanService(
+        queryService: _FakeMiseQueryService(),
+      );
+      final projects = await service.fetchProjects([
+        ScanDirectoryRecord(path: root.path),
+      ]);
+      expect(projects, hasLength(2));
+      expect(
+        projects
+            .firstWhere((p) => p.name == 'rust-app')
+            .bindings
+            .single
+            .projectVersion,
+        '1.99.0',
+      );
+      expect(
+        projects
+            .firstWhere((p) => p.name == 'flutter-app')
+            .bindings
+            .single
+            .projectVersion,
+        '3.47.7',
+      );
+    },
+  );
 }

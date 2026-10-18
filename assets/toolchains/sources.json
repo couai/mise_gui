@@ -1,0 +1,42 @@
+{
+  "java.svg": {
+    "url": "https://raw.githubusercontent.com/openjdk/duke/master/vector/Hips.svg",
+    "sha256": "f5a063aa2c782c4236833d7b5338a97b27820e2412d9b23263b74d3d5ec8d112",
+    "bytes": 4035
+  },
+  "node.svg": {
+    "url": "https://raw.githubusercontent.com/nodejs/nodejs.org/main/apps/site/public/static/logos/nodejsHex.svg",
+    "sha256": "e4c8de546b2462ad9497679c55609701144ffacd8e18ac17a7f7f7b795de9fe7",
+    "bytes": 2113
+  },
+  "python.svg": {
+    "url": "https://s3.dualstack.us-east-2.amazonaws.com/pythondotorg-assets/media/files/python-logo-only.svg",
+    "sha256": "baec8662a1461c2cacc326b54d2727cb2f1ce07ba02d00f5b826d035104f649f",
+    "bytes": 9605
+  },
+  "go.svg": {
+    "url": "https://go.dev/images/gophers/blue.svg",
+    "sha256": "c328cbcb80b48bef454015a9e091d5543de8dad939fdd2600942ae985da8f2be",
+    "bytes": 7788
+  },
+  "rust.svg": {
+    "url": "https://raw.githubusercontent.com/rust-lang/rust-artwork/master/logo/rust-logo.svg",
+    "sha256": "9a9549ea02d34dec3a610b8299f1b8121c7b10b14a44d3baec46ba15e9a06ca2",
+    "bytes": 3297
+  },
+  "rust-dark.svg": {
+    "url": "https://raw.githubusercontent.com/rust-lang/rust-artwork/master/logo/rust-logo-white-outline.svg",
+    "sha256": "c7a5fb03c8c4ddedcf2d2aa99ac607ee30cd266df7fa39b3d355d16efabcfcca",
+    "bytes": 12021
+  },
+  "flutter.svg": {
+    "url": "https://raw.githubusercontent.com/flutter/website/main/sites/docs/web/assets/images/branding/flutter/logo/default.svg",
+    "sha256": "691ca63b274074fb4713296d3125988242b340ac23b1f4476c277b3f79fd984b",
+    "bytes": 3637
+  },
+  "dart.svg": {
+    "url": "https://raw.githubusercontent.com/dart-lang/site-www/main/site/web/assets/img/logo/dart-192.svg",
+    "sha256": "f56021f03f95c46f1f2bcefab7de3926c82efa88a80afdd6ff797a5d3865c7a0",
+    "bytes": 1631
+  }
+}

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
+import 'package:mise_gui/services/toolchain_layout.dart';
 
 import 'package:mise_gui/models/app_models.dart';
 import 'package:mise_gui/services/mise_process_service.dart';
@@ -52,6 +53,8 @@ class LiveProjectScanService implements ProjectScanService {
     '.ruby-version': 'ruby',
     '.java-version': 'java',
     '.go-version': 'go',
+    'rust-toolchain.toml': 'rust',
+    'rust-toolchain': 'rust',
     '.terraform-version': 'terraform',
   };
 
@@ -263,9 +266,7 @@ class LiveProjectScanService implements ProjectScanService {
 
     final projectAssignments = _parseProjectAssignments(projectContents);
     final projectSources = _parseProjectAssignmentSources(projectContents);
-    final globalAssignments = _parseAssignments(
-      _extractSection(globalConfig, 'tools'),
-    );
+    final globalAssignments = _parseToolAssignments(globalConfig);
     final commandPreview = [
       'mise current',
       'mise ls --json',
@@ -391,11 +392,7 @@ class LiveProjectScanService implements ProjectScanService {
   }
 
   String _globalConfigPath() {
-    final home = Platform.environment['HOME'];
-    if (home == null || home.isEmpty) {
-      return '.config/mise/config.toml';
-    }
-    return '$home/.config/mise/config.toml';
+    return ToolchainLayout.current.globalConfigPath;
   }
 
   Future<String?> _readFileIfExists(String path) async {
@@ -461,6 +458,23 @@ class LiveProjectScanService implements ProjectScanService {
     return buffer.join('\n').trimRight();
   }
 
+  Map<String, String> _parseToolAssignments(String content) {
+    final values = <String, String>{
+      ..._parseAssignments(_extractSection(content, 'tools')),
+    };
+    for (final match in RegExp(
+      r'^\[tools\.([a-zA-Z0-9_-]+)\]\s*$',
+      multiLine: true,
+    ).allMatches(content)) {
+      final tool = match.group(1)!;
+      final version = _parseAssignments(
+        _extractSection(content, 'tools.$tool'),
+      )['version'];
+      if (version != null) values[tool] = version;
+    }
+    return values;
+  }
+
   Map<String, String> _parseAssignments(String? section) {
     if (section == null || section.trim().isEmpty) {
       return const <String, String>{};
@@ -511,10 +525,16 @@ class LiveProjectScanService implements ProjectScanService {
   Map<String, String> _parseAssignmentsForPath(String path, String content) {
     final fileName = _basename(path);
     if (_workspaceConfigNames.contains(fileName)) {
-      return _parseAssignments(_extractSection(content, 'tools'));
+      return _parseToolAssignments(content);
     }
     if (fileName == _toolVersionsFileName) {
       return _parseToolVersions(content);
+    }
+    if (fileName == 'rust-toolchain.toml') {
+      final channel = _parseAssignments(
+        _extractSection(content, 'toolchain'),
+      )['channel'];
+      return channel == null ? const {} : {'rust': channel};
     }
     final tool = _singleToolVersionFiles[fileName];
     if (tool != null) {

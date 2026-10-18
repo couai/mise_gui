@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:mise_gui/shared/ui/tool_logo.dart';
+import 'package:mise_gui/services/toolchain_layout.dart';
+import 'package:mise_gui/features/toolchains/application/toolchains_provider.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -243,17 +246,16 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
     }
 
     final installCommand = 'mise install ${request.tool}@${request.version}';
-    final useCommand = 'mise use --global ${request.tool}@${request.version}';
 
     await _openToolActionPreview(
       context,
       ActionPreviewDialogData(
         title: '安装 ${request.tool}@${request.version}',
-        summary: '会先安装这个版本，再把它写成全局默认版本。',
-        command: '$installCommand\n$useCommand',
+        summary: '按分类目录安装并注册，保留现有全局默认版本。',
+        command: installCommand,
         level: HealthLevel.info,
         affectedFiles: [_globalConfigPath(), 'mise 安装缓存 / 已安装版本'],
-        impactScope: ['会改变全局默认工具版本。', '安装完成后会自动刷新工具页与总览页数据。'],
+        impactScope: ['安装后可另行选择全局或项目版本。', '安装完成后会自动刷新工具页与总览页数据。'],
         riskNotes: const [
           '安装时需要访问网络，过程可能会持续一段时间。',
           '如果版本号无效，安装会失败，失败结果会记录到最近操作。',
@@ -267,6 +269,31 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
     BuildContext context,
     ActionPreviewDialogData data,
   ) async {
+    if (data.requiresConfirmation) {
+      try {
+        final command = await ref
+            .read(classifiedToolchainServiceProvider)
+            .prepare(data.command);
+        data = ActionPreviewDialogData(
+          title: data.title,
+          summary: data.summary,
+          command: command,
+          level: data.level,
+          diffPreview: data.diffPreview,
+          affectedFiles: [
+            ToolchainLayout.current.root,
+            ToolchainLayout.current.globalConfigPath,
+          ],
+          impactScope: data.impactScope,
+          riskNotes: data.riskNotes,
+          confirmLabel: data.confirmLabel,
+        );
+      } catch (error) {
+        if (mounted) _showFeedback('$error');
+        return;
+      }
+      if (!mounted || !context.mounted) return;
+    }
     final rootNavigator = Navigator.of(context, rootNavigator: true);
     final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showActionPreviewDialog(context, data: data);
@@ -310,6 +337,7 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
         return;
       }
 
+      ref.invalidate(classifiedVersionsProvider);
       final success = result.isSuccess;
       final diagnosis = success
           ? null
@@ -464,13 +492,7 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
     return '$title 执行失败：${diagnosis.summary}';
   }
 
-  String _globalConfigPath() {
-    final home = Platform.environment['HOME'];
-    if (home == null || home.isEmpty) {
-      return '~/.config/mise/config.toml';
-    }
-    return '$home/.config/mise/config.toml';
-  }
+  String _globalConfigPath() => ToolchainLayout.current.globalConfigPath;
 
   Set<String> _extractAffectedToolIds(String command) {
     final toolIds = <String>{};
@@ -1372,7 +1394,7 @@ class _ToolAccordionItem extends StatelessWidget {
           transitionBuilder: (child, animation) {
             return SizeTransition(
               sizeFactor: animation,
-              axisAlignment: -1,
+              alignment: Alignment.topCenter,
               child: FadeTransition(opacity: animation, child: child),
             );
           },
@@ -1488,6 +1510,8 @@ class _ToolListItem extends StatelessWidget {
             children: [
               Row(
                 children: [
+                  ToolLogo(tool: tool.id, size: 30),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       tool.name,

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:mise_gui/services/toolchain_layout.dart';
 
 import 'package:mise_gui/models/app_models.dart';
 
@@ -57,9 +58,7 @@ class LocalHistoryService implements HistoryService {
     final appData = Platform.environment['APPDATA'];
 
     if (Platform.isMacOS && home != null && home.isNotEmpty) {
-      return File(
-        '$home/Library/Application Support/mise_gui/gui_history.json',
-      );
+      return File('${ToolchainLayout.current.appDir}/state/gui_history.json');
     }
     if (Platform.isWindows && appData != null && appData.isNotEmpty) {
       return File('$appData\\mise_gui\\gui_history.json');

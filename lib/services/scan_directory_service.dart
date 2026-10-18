@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:mise_gui/services/toolchain_layout.dart';
 
 import 'package:mise_gui/models/app_models.dart';
 
@@ -124,7 +125,7 @@ class LocalScanDirectoryService implements ScanDirectoryService {
 
     if (Platform.isMacOS && home != null && home.isNotEmpty) {
       return File(
-        '$home/Library/Application Support/mise_gui/project_scan_directories.json',
+        '${ToolchainLayout.current.appDir}/config/project_scan_directories.json',
       );
     }
     if (Platform.isWindows && appData != null && appData.isNotEmpty) {
@@ -188,7 +189,10 @@ class LocalScanDirectoryService implements ScanDirectoryService {
   }
 
   List<ScanDirectoryRecord> _defaultDirectories() {
-    final path = _normalizePath(Directory.current.path);
+    final workspace = '${ToolchainLayout.current.home}/WorkSpace/code';
+    final path = _normalizePath(
+      Directory(workspace).existsSync() ? workspace : Directory.current.path,
+    );
     if (path.isEmpty) {
       return const <ScanDirectoryRecord>[];
     }
