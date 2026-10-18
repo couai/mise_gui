@@ -11,7 +11,6 @@ import 'package:mise_gui/features/dashboard/application/dashboard_provider.dart'
 import 'package:mise_gui/features/tools/presentation/tools_page.dart';
 import 'package:mise_gui/models/app_models.dart';
 import 'package:mise_gui/services/app_release_service.dart';
-import 'package:mise_gui/services/app_update_service.dart';
 import 'package:mise_gui/services/history_service.dart';
 import 'package:mise_gui/services/mise_cli_service.dart';
 import 'package:mise_gui/services/mise_process_service.dart';
@@ -64,34 +63,6 @@ class _MissingMiseProcessService implements MiseProcessService {
   @override
   Future<String> resolveExecutablePath() {
     throw UnimplementedError();
-  }
-}
-
-class _NoopAppUpdateService implements AppUpdateService {
-  const _NoopAppUpdateService();
-
-  @override
-  Future<AppUpdateInfo?> checkForUpdate({
-    required String currentVersion,
-  }) async {
-    return null;
-  }
-}
-
-class _HasUpdateAppUpdateService implements AppUpdateService {
-  const _HasUpdateAppUpdateService();
-
-  @override
-  Future<AppUpdateInfo?> checkForUpdate({
-    required String currentVersion,
-  }) async {
-    return const AppUpdateInfo(
-      currentVersion: '1.0.0',
-      latestVersion: '1.0.1',
-      tagName: 'v1.0.1',
-      releaseNotes: '修复若干启动和安装问题',
-      releaseUrl: 'https://github.com/likaia/mise_gui/releases/tag/v1.0.1',
-    );
   }
 }
 
@@ -227,9 +198,6 @@ void main() {
         overrides: <Override>[
           appReleaseServiceProvider.overrideWithValue(
             const _FakeAppReleaseService(),
-          ),
-          appUpdateServiceProvider.overrideWithValue(
-            const _NoopAppUpdateService(),
           ),
           miseAvailableProvider.overrideWith((ref) => true),
           dashboardProvider.overrideWith((ref) => _dashboardSnapshot),
@@ -405,9 +373,6 @@ void main() {
           appReleaseServiceProvider.overrideWithValue(
             const _FakeAppReleaseService(),
           ),
-          appUpdateServiceProvider.overrideWithValue(
-            const _NoopAppUpdateService(),
-          ),
           miseProcessServiceProvider.overrideWithValue(
             const _MissingMiseProcessService(),
           ),
@@ -440,9 +405,6 @@ void main() {
           appReleaseServiceProvider.overrideWithValue(
             const _FakeAppReleaseService(),
           ),
-          appUpdateServiceProvider.overrideWithValue(
-            const _NoopAppUpdateService(),
-          ),
           miseProcessServiceProvider.overrideWithValue(
             const _MissingMiseProcessService(),
           ),
@@ -462,37 +424,20 @@ void main() {
     expect(find.text('安装完成后你会立刻看到'), findsNothing);
   });
 
-  testWidgets('shows update dialog when a newer release is available', (
+  testWidgets('starts without application or mise upgrade controls', (
     WidgetTester tester,
   ) async {
-    tester.view.physicalSize = const Size(1600, 1200);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
+    await pumpMiseGuiApp(tester);
+    await tester.pump(const Duration(seconds: 3));
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: <Override>[
-          appReleaseServiceProvider.overrideWithValue(
-            const _FakeAppReleaseService(),
-          ),
-          appUpdateServiceProvider.overrideWithValue(
-            const _HasUpdateAppUpdateService(),
-          ),
-          appUpdateChecksEnabledProvider.overrideWithValue(true),
-          miseCliServiceProvider.overrideWithValue(const MockMiseCliService()),
-          historyServiceProvider.overrideWithValue(const MockHistoryService()),
-          projectScanServiceProvider.overrideWithValue(
-            const MockProjectScanService(),
-          ),
-        ],
-        child: const MiseGuiApp(),
-      ),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-
-    expect(find.text('发现新版本'), findsOneWidget);
-    expect(find.text('1.0.1'), findsWidgets);
-    expect(find.text('修复若干启动和安装问题'), findsOneWidget);
+    expect(find.text('发现新版本'), findsNothing);
+    expect(find.text('前往GitHub下载'), findsNothing);
+    expect(find.text('mise 本体更新'), findsNothing);
+    expect(find.text('检查更新'), findsNothing);
+    expect(find.text('升级 mise'), findsNothing);
+    expect(find.text('环境总览'), findsWidgets);
+    expect(find.text('最近活动'), findsOneWidget);
+    expect(find.text('刷新环境数据'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

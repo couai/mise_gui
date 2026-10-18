@@ -24,6 +24,7 @@
 
 - 新增“工具链”页面，识别 Java、Node.js、Python、Go、Rust、Flutter；显示真实目录、注册路径和作用域，Dart 跟随 Flutter。
 - 分类安装与全局/项目切换分开，原工具页也接入相同策略。首期保护已有目录，卸载和批量升级暂不开放。
+- 移除 GUI 自身的更新检测、提示与 mise 本体升级入口；开发工具的远端版本查询和分类安装继续保留。
 - 应用配置与历史放在 `$HOME/Developer/toolchains/mise-gui/`。全局配置、缓存和运行时沿用已有 mise 环境。
 - [设计方案与实现思路](docs/classified-toolchains.md) · [实际 Flutter 页面预览](docs/design/README.md)
 - [代码与上游 Issues 检查记录](docs/bug-audit-2026-10-18.md)

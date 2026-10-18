@@ -10,8 +10,6 @@ import 'package:mise_gui/repositories/dashboard_repository.dart';
 import 'package:mise_gui/repositories/projects_repository.dart';
 import 'package:mise_gui/repositories/tools_repository.dart';
 import 'package:mise_gui/services/app_release_service.dart';
-import 'package:mise_gui/services/app_update_service.dart';
-import 'package:mise_gui/services/browser_launcher_service.dart';
 import 'package:mise_gui/services/config_service.dart';
 import 'package:mise_gui/services/config_watch_service.dart';
 import 'package:mise_gui/services/desktop_window_service.dart';
@@ -20,7 +18,6 @@ import 'package:mise_gui/services/mise_action_service.dart';
 import 'package:mise_gui/services/mise_cli_service.dart';
 import 'package:mise_gui/services/mise_process_service.dart';
 import 'package:mise_gui/services/mise_query_service.dart';
-import 'package:mise_gui/services/mise_self_update_service.dart';
 import 'package:mise_gui/services/project_scan_service.dart';
 import 'package:mise_gui/services/scan_directory_service.dart';
 
@@ -60,16 +57,6 @@ final appReleaseServiceProvider = Provider<AppReleaseService>(
 
 final appVersionInfoProvider = FutureProvider<AppVersionInfo>(
   (ref) => ref.watch(appReleaseServiceProvider).load(),
-);
-
-final appUpdateChecksEnabledProvider = Provider<bool>((ref) => false);
-
-final appUpdateServiceProvider = Provider<AppUpdateService>(
-  (ref) => const GitHubAppUpdateService(),
-);
-
-final browserLauncherServiceProvider = Provider<BrowserLauncherService>(
-  (ref) => const SystemBrowserLauncherService(),
 );
 
 final desktopWindowServiceProvider = Provider<DesktopWindowService>(
@@ -114,12 +101,6 @@ final miseActionServiceProvider = Provider<MiseActionService>(
   (ref) => LocalMiseActionService(
     ref.watch(miseProcessServiceProvider),
     policy: ref.watch(classifiedToolchainServiceProvider),
-  ),
-);
-
-final miseSelfUpdateServiceProvider = Provider<MiseSelfUpdateService>(
-  (ref) => GitHubMiseSelfUpdateService(
-    processService: ref.watch(miseProcessServiceProvider),
   ),
 );
 
