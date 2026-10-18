@@ -1,3 +1,4 @@
+import 'workbench_test_overrides.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -21,6 +22,9 @@ import 'package:mise_gui/services/local_tool_inventory.dart';
 import 'package:mise_gui/services/local_tool_process.dart';
 import 'package:mise_gui/services/mise_process_service.dart';
 import 'package:mise_gui/services/toolchain_layout.dart';
+import 'package:mise_gui/features/settings/application/manager_settings_provider.dart';
+import 'package:mise_gui/features/tasks/application/task_provider.dart';
+import 'package:mise_gui/models/manager_settings.dart';
 
 const root = '/Users/example/Developer/toolchains';
 const alias = '/Users/example/.m2';
@@ -116,12 +120,14 @@ class Service extends DirectoryStorageService {
   final bool hold;
   bool fail;
   int calls = 0;
+  final tokens = <DirectoryScanCancellation>[];
   @override
   Stream<StorageSnapshot> scan(
     LocalToolSnapshot inventory,
     DirectoryScanCancellation cancellation,
   ) async* {
     calls++;
+    tokens.add(cancellation);
     if (fail) throw StateError('scan failed');
     if (hold) {
       yield fixture(scanning: true);
@@ -192,6 +198,7 @@ void main() {
     addTearDown(tester.view.reset);
     final c = ProviderContainer(
       overrides: [
+        ...isolatedWorkbenchOverrides(),
         miseAvailableProvider.overrideWith((ref) async => false),
         localToolsProvider.overrideWith(
           (ref) async => LocalToolSnapshot(
@@ -341,6 +348,45 @@ void main() {
       expect(service.calls, 2);
       await tester.tap(find.text('停止扫描'));
       await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
+    'applying manager settings starts a fresh scan token and preserves task records',
+    (tester) async {
+      final service = Service();
+      final c = await app(tester, service: service);
+      final temp = Directory.systemTemp.createTempSync(
+        'devworkbench-scan-settings-',
+      );
+      addTearDown(() => temp.delete(recursive: true));
+      await tester.runAsync(
+        () => c
+            .read(managerSettingsProvider.notifier)
+            .save(
+              ManagerSettings(
+                miseExecutable: '/bin/echo',
+                brewExecutable: '/bin/echo',
+                homebrewPrefix: temp.path,
+                androidSdk: temp.path,
+                xcodeDeveloper: temp.path,
+              ),
+            ),
+      );
+      await tester.pumpAndSettle();
+      expect(service.calls, 2);
+      expect(service.tokens.first.cancelled, isTrue);
+      expect(service.tokens.last.cancelled, isFalse);
+      expect(
+        c
+            .read(taskCenterProvider)
+            .tasks
+            .where((t) => t.manager == '目录扫描')
+            .length,
+        2,
+      );
+      expect(c.read(taskCenterProvider).busy, isFalse);
+      expect(tester.takeException(), isNull);
     },
   );
 

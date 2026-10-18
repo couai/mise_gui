@@ -1,3 +1,4 @@
+import 'workbench_test_overrides.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -89,6 +90,7 @@ void main() {
       addTearDown(tester.view.reset);
       final container = ProviderContainer(
         overrides: [
+          ...isolatedWorkbenchOverrides(),
           miseAvailableProvider.overrideWith((ref) async => true),
           classifiedVersionsProvider.overrideWith((ref) async => snapshot()),
           toolsProvider.overrideWith((ref) async => toolSnapshot()),
@@ -144,6 +146,7 @@ void main() {
       final boundaryKey = GlobalKey();
       final container = ProviderContainer(
         overrides: [
+          ...isolatedWorkbenchOverrides(),
           miseAvailableProvider.overrideWith((ref) async => true),
           classifiedVersionsProvider.overrideWith((ref) async => snapshot()),
           toolsProvider.overrideWith((ref) async => toolSnapshot()),

@@ -6,6 +6,9 @@ import 'package:mise_gui/services/classified_toolchain_service.dart';
 import 'package:mise_gui/services/mise_action_service.dart';
 import 'package:mise_gui/services/mise_process_service.dart';
 import 'package:mise_gui/services/toolchain_layout.dart';
+import 'package:mise_gui/services/tracked_mise_action_service.dart';
+import 'package:mise_gui/services/task_center.dart';
+import 'package:mise_gui/services/workbench_json_store.dart';
 
 class InventoryProcess implements MiseProcessService {
   InventoryProcess(this.rows);
@@ -341,6 +344,7 @@ void main() {
       for (final version in ['24.21.0', '22.20.0']) {
         final target = layout.installTarget('node', version);
         await Directory('$target/bin').create(recursive: true);
+        await File('$target/bin/node').writeAsString('isolated SDK fixture');
         await live.run(
           MiseCommandRequest(arguments: ['link', 'node@$version', target]),
         );
@@ -353,7 +357,13 @@ void main() {
       final before = await global.readAsString();
       final project = Directory('${temp.path}/project');
       await project.create();
-      final executor = LocalMiseActionService(live, policy: classified);
+      final tasks = TaskCenter(WorkbenchJsonStore(null));
+      addTearDown(tasks.dispose);
+      final executor = TrackedMiseActionService(
+        LocalMiseActionService(live, policy: classified),
+        tasks,
+        classified,
+      );
       final script = await classified.switchPlan(
         'node',
         '22.20.0',

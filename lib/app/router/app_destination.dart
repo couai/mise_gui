@@ -36,8 +36,22 @@ enum AppDestination {
     icon: Icons.workspaces_outline,
     selectedIcon: Icons.workspaces_rounded,
   ),
+  tasks(
+    label: '任务中心',
+    description: '步骤、输出与验证',
+    path: '/tasks',
+    icon: Icons.task_alt_outlined,
+    selectedIcon: Icons.task_alt_rounded,
+  ),
+  managers(
+    label: '管理器设置',
+    description: '路径与执行选项',
+    path: '/managers',
+    icon: Icons.settings_outlined,
+    selectedIcon: Icons.settings_rounded,
+  ),
   config(
-    label: '配置',
+    label: 'mise 配置',
     description: '全局配置',
     path: '/config',
     icon: Icons.tune_outlined,

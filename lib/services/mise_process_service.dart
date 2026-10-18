@@ -239,9 +239,13 @@ abstract class MiseProcessService {
 }
 
 class LocalMiseProcessService implements MiseProcessService {
-  const LocalMiseProcessService({this.executablePath});
+  const LocalMiseProcessService({
+    this.executablePath,
+    this.environmentOverrides = const {},
+  });
 
   final String? executablePath;
+  final Map<String, String> environmentOverrides;
   static const List<String> _fallbackExecutablePaths = <String>[
     '/opt/homebrew/bin/mise',
     '/usr/local/bin/mise',
@@ -353,7 +357,9 @@ class LocalMiseProcessService implements MiseProcessService {
     required String executablePath,
     required Map<String, String> environment,
   }) async {
-    if (!request.preferShellExecution || Platform.isWindows) {
+    if (!request.preferShellExecution ||
+        Platform.isWindows ||
+        environmentOverrides.isNotEmpty) {
       return _runProcessWithTimeout(
         executablePath,
         request.arguments,
@@ -576,6 +582,7 @@ class LocalMiseProcessService implements MiseProcessService {
     environment.putIfAbsent('MISE_STATE_DIR', () => layout.stateDir);
     environment.putIfAbsent('CARGO_HOME', () => layout.cargoHome);
     environment.putIfAbsent('RUSTUP_HOME', () => layout.rustupHome);
+    environment.addAll(environmentOverrides);
     return environment;
   }
 

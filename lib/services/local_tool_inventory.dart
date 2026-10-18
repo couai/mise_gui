@@ -22,6 +22,8 @@ class SystemLocalToolInventory implements LocalToolInventory {
     this.applications = '/Applications',
     this.fallbackBins = const ['/opt/homebrew/bin', '/usr/bin', '/bin'],
     this.registry,
+    this.executableOverrides = const {},
+    this.probeTimeout = const Duration(seconds: 5),
   });
   final ToolchainLayout layout;
   final LocalToolProcess process;
@@ -29,6 +31,8 @@ class SystemLocalToolInventory implements LocalToolInventory {
   final String applications;
   final List<String> fallbackBins;
   final LocalToolRegistry? registry;
+  final Map<String, String> executableOverrides;
+  final Duration probeTimeout;
 
   Map<String, String> get _environment => {
     ...layout.environment,
@@ -249,10 +253,12 @@ class SystemLocalToolInventory implements LocalToolInventory {
       }
     }
     if (registered.isEmpty && spec.id != 'dart' && spec.id != 'flutter') {
-      executable = await _findExecutable(
-        spec.commands,
-        extra: [...spec.bins, ...runtimeBins],
-      );
+      executable = executableOverrides.containsKey(spec.id)
+          ? executableOverrides[spec.id]
+          : await _findExecutable(
+              spec.commands,
+              extra: [...spec.bins, ...runtimeBins],
+            );
       if (executable != null) {
         final canonical = await File(executable).resolveSymbolicLinks();
         // A mise shim alone is not proof that a runtime is installed. Never
@@ -269,6 +275,7 @@ class SystemLocalToolInventory implements LocalToolInventory {
               spec.args,
               environment: _environment,
               workingDirectory: layout.home,
+              timeout: probeTimeout,
             );
           } catch (_) {
             result = const LocalCommandResult(-1, '', '');
@@ -470,6 +477,7 @@ class SystemLocalToolInventory implements LocalToolInventory {
       String? command,
       String? folder,
       List<String> args = const ['--version'],
+      List<String> bins = const [],
       Map<String, String> paths = const {},
     }) => _ToolSpec(
       id,
@@ -479,6 +487,7 @@ class SystemLocalToolInventory implements LocalToolInventory {
       commands: [command ?? id],
       args: args,
       bins: [
+        ...bins,
         if (folder != null) '$r/$folder/bin',
         if (folder != null) '$r/$folder',
       ],
@@ -505,6 +514,10 @@ class SystemLocalToolInventory implements LocalToolInventory {
           '配置 / 数据':
               '$r/$folder/${folder == 'xcode' ? 'derived-data' : 'data'}',
         if (folder == 'xcode') '归档': '$r/xcode/archives',
+        if (folder == 'xcode')
+          'Developer SDK':
+              layout.environment['DEVELOPER_DIR'] ??
+              '/Applications/Xcode.app/Contents/Developer',
         if (folder == 'xcode') '编译缓存': '$r/xcode/compilation-cache',
         if (folder == 'reqable') 'MCP 入口': '$r/reqable/bin',
         if (folder == 'mitmproxy') 'CLI / mitmweb': '$r/mitmproxy/bin',
@@ -639,7 +652,11 @@ class SystemLocalToolInventory implements LocalToolInventory {
         LocalToolCategory.build,
         '系统级 CLI 和应用包管理器。',
         command: 'brew',
-        paths: {'安装目录': '/opt/homebrew'},
+        paths: {
+          '安装目录':
+              layout.environment['DEVWORKBENCH_HOMEBREW_PREFIX'] ??
+              '/opt/homebrew',
+        },
       ),
       _ToolSpec(
         'android-sdk',
@@ -671,7 +688,8 @@ class SystemLocalToolInventory implements LocalToolInventory {
         'ADB',
         LocalToolCategory.mobile,
         'Android 设备调试桥。',
-        folder: 'android/sdk/platform-tools',
+        paths: {'安装目录': '$android/platform-tools'},
+        bins: ['$android/platform-tools'],
         args: ['version'],
       ),
       app(

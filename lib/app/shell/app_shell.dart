@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
+import 'package:mise_gui/features/tasks/application/task_provider.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -33,7 +34,9 @@ class AppShell extends ConsumerWidget {
     final needsMise =
         destination != AppDestination.localTools &&
         destination != AppDestination.dashboard &&
-        destination != AppDestination.storage;
+        destination != AppDestination.storage &&
+        destination != AppDestination.tasks &&
+        destination != AppDestination.managers;
     final showMissing = isMissingMise && needsMise;
 
     return LayoutBuilder(
@@ -186,6 +189,9 @@ class _Sidebar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppTheme.colorsOf(context);
     final appVersion = ref.watch(appVersionInfoProvider);
+    final runningTasks = ref.watch(
+      taskCenterProvider.select((s) => s.tasks.where((t) => t.running).length),
+    );
     return SizedBox(
       width: expanded ? 212 : 88,
       child: AppPanel(
@@ -231,6 +237,9 @@ class _Sidebar extends ConsumerWidget {
                         padding: const EdgeInsets.only(bottom: 6),
                         child: _SidebarDestination(
                           destination: destination,
+                          badge: destination == AppDestination.tasks
+                              ? runningTasks
+                              : 0,
                           expanded: expanded,
                           selected: currentIndex == destination.index,
                           locked: false,
@@ -307,6 +316,7 @@ class _SidebarDestination extends StatelessWidget {
     required this.selected,
     required this.locked,
     required this.onTap,
+    this.badge = 0,
   });
 
   final AppDestination destination;
@@ -314,6 +324,7 @@ class _SidebarDestination extends StatelessWidget {
   final bool selected;
   final bool locked;
   final VoidCallback onTap;
+  final int badge;
 
   @override
   Widget build(BuildContext context) {
@@ -404,6 +415,21 @@ class _SidebarDestination extends StatelessWidget {
                       Icons.lock_outline_rounded,
                       size: 16,
                       color: colors.textMuted,
+                    ),
+                  if (badge > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.accent.withValues(alpha: .18),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '$badge',
+                        style: TextStyle(color: colors.accent, fontSize: 12),
+                      ),
                     ),
                 ],
               ],

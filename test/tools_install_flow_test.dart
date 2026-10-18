@@ -1,3 +1,4 @@
+import 'workbench_test_overrides.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -95,6 +96,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ...isolatedWorkbenchOverrides(),
             miseProcessServiceProvider.overrideWithValue(recorder),
             miseCliServiceProvider.overrideWithValue(
               const MockMiseCliService(),

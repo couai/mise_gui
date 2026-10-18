@@ -1,3 +1,4 @@
+import 'workbench_test_overrides.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -204,6 +205,7 @@ void main() {
     addTearDown(tester.view.reset);
     final container = ProviderContainer(
       overrides: [
+        ...isolatedWorkbenchOverrides(),
         miseAvailableProvider.overrideWith((ref) async => mise),
         localToolInventoryProvider.overrideWithValue(inventory),
         localToolRegistryProvider.overrideWithValue(Registry(inventory)),

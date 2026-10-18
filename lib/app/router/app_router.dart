@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:mise_gui/features/tasks/presentation/tasks_page.dart';
+import 'package:mise_gui/features/settings/presentation/manager_settings_page.dart';
 import 'package:mise_gui/features/storage/presentation/storage_page.dart';
 import 'package:mise_gui/features/local_tools/presentation/local_tools_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -78,6 +80,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppDestination.projects.path,
                 builder: (context, state) => const ProjectsPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppDestination.tasks.path,
+                builder: (context, state) => const TasksPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppDestination.managers.path,
+                builder: (context, state) => const ManagerSettingsPage(),
               ),
             ],
           ),

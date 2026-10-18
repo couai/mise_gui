@@ -1,5 +1,8 @@
 import 'dart:ui';
-import 'package:mise_gui/services/toolchain_layout.dart';
+import 'package:mise_gui/services/tracked_config_service.dart';
+import 'package:mise_gui/features/settings/application/manager_settings_provider.dart';
+import 'package:mise_gui/features/tasks/application/task_provider.dart';
+import 'package:mise_gui/services/tracked_mise_action_service.dart';
 import 'package:mise_gui/services/classified_toolchain_service.dart';
 
 import 'package:flutter/material.dart';
@@ -82,9 +85,15 @@ final miseAvailableProvider = FutureProvider<bool>((ref) async {
   }
 });
 
-final miseProcessServiceProvider = Provider<MiseProcessService>(
-  (ref) => const LocalMiseProcessService(),
-);
+final miseProcessServiceProvider = Provider<MiseProcessService>((ref) {
+  final settings = ref.watch(managerSettingsProvider);
+  return LocalMiseProcessService(
+    executablePath: settings.miseExecutable.isEmpty
+        ? null
+        : settings.miseExecutable,
+    environmentOverrides: settings.environment,
+  );
+});
 
 final miseQueryServiceProvider = Provider<MiseQueryService>(
   (ref) => CliMiseQueryService(ref.watch(miseProcessServiceProvider)),
@@ -93,14 +102,21 @@ final miseQueryServiceProvider = Provider<MiseQueryService>(
 final classifiedToolchainServiceProvider = Provider<ClassifiedToolchainService>(
   (ref) => ClassifiedToolchainService(
     ref.watch(miseProcessServiceProvider),
-    ToolchainLayout.current,
+    ref.watch(managerLayoutProvider),
   ),
 );
 
 final miseActionServiceProvider = Provider<MiseActionService>(
-  (ref) => LocalMiseActionService(
-    ref.watch(miseProcessServiceProvider),
-    policy: ref.watch(classifiedToolchainServiceProvider),
+  (ref) => TrackedMiseActionService(
+    LocalMiseActionService(
+      ref.watch(miseProcessServiceProvider),
+      policy: ref.watch(classifiedToolchainServiceProvider),
+      timeout: Duration(
+        minutes: ref.watch(managerSettingsProvider).actionTimeoutMinutes,
+      ),
+    ),
+    ref.read(taskCenterProvider.notifier),
+    ref.watch(classifiedToolchainServiceProvider),
   ),
 );
 
@@ -112,7 +128,10 @@ final miseCliServiceProvider = Provider<MiseCliService>(
 );
 
 final configServiceProvider = Provider<ConfigService>(
-  (ref) => const LiveConfigService(),
+  (ref) => TrackedConfigService(
+    const LiveConfigService(),
+    ref.read(taskCenterProvider.notifier),
+  ),
 );
 
 final configWatchServiceProvider = Provider<ConfigWatchService>(

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:mise_gui/features/settings/application/manager_settings_provider.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mise_gui/app/bootstrap/dependencies.dart';
@@ -19,7 +20,20 @@ final localToolRegistryProvider = Provider<LocalToolRegistry>(
 );
 final localToolInventoryProvider = Provider<LocalToolInventory>(
   (ref) => SystemLocalToolInventory(
-    layout: ToolchainLayout.current,
+    layout: ref.watch(managerLayoutProvider),
+    executableOverrides: {
+      if (ref.watch(managerSettingsProvider).miseExecutable.isNotEmpty)
+        'mise': ref.watch(managerSettingsProvider).miseExecutable,
+      'homebrew': ref.watch(managerSettingsProvider).brewExecutable,
+    },
+    probeTimeout: Duration(
+      seconds: ref.watch(managerSettingsProvider).probeTimeoutSeconds,
+    ),
+    fallbackBins: [
+      '${ref.watch(managerSettingsProvider).homebrewPrefix}/bin',
+      '/usr/bin',
+      '/bin',
+    ],
     process: ref.watch(localToolProcessProvider),
     loadVersions: ref.watch(classifiedToolchainServiceProvider).inventory,
     registry: ref.watch(localToolRegistryProvider),

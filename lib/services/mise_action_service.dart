@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:mise_gui/models/workbench_task.dart';
 import 'package:mise_gui/services/toolchain_layout.dart';
 import 'package:mise_gui/services/classified_toolchain_service.dart';
 
@@ -248,14 +249,18 @@ class MiseActionResult {
     required this.script,
     required this.commands,
     this.lockfileCleanupReport = const MiseLockfileCleanupReport(),
+    this.verification,
   });
 
   final String script;
   final List<ExecutedMiseCommand> commands;
   final MiseLockfileCleanupReport lockfileCleanupReport;
+  final TaskVerification? verification;
 
   bool get isSuccess =>
-      commands.isNotEmpty && commands.every((item) => item.exitCode == 0);
+      commands.isNotEmpty &&
+      commands.every((item) => item.exitCode == 0) &&
+      (verification?.passed ?? true);
 
   int get exitCode => commands.isEmpty ? -1 : commands.last.exitCode;
 
@@ -334,11 +339,13 @@ class LocalMiseActionService implements MiseActionService {
   const LocalMiseActionService(
     this._processService, {
     this.policy,
+    this.timeout = const Duration(minutes: 30),
     MiseLockfileCleaner lockfileCleaner = const MiseLockfileCleaner(),
   }) : _lockfileCleaner = lockfileCleaner;
 
   final MiseProcessService _processService;
   final ClassifiedToolchainService? policy;
+  final Duration timeout;
   final MiseLockfileCleaner _lockfileCleaner;
 
   @override
@@ -381,7 +388,7 @@ class LocalMiseActionService implements MiseActionService {
           workingDirectory: workingDirectory ?? policy?.layout.home,
           allowNonZeroExit: true,
           preferShellExecution: true,
-          timeout: const Duration(minutes: 30),
+          timeout: timeout,
           onOutput: (chunk) {
             onProgress?.call(
               MiseActionProgressEvent(

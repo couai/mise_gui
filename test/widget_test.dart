@@ -1,3 +1,4 @@
+import 'workbench_test_overrides.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -172,6 +173,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          ...isolatedWorkbenchOverrides(),
           classifiedVersionsProvider.overrideWith((ref) async => []),
           miseCliServiceProvider.overrideWithValue(service),
         ],
@@ -209,6 +211,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+          ...isolatedWorkbenchOverrides(),
           localToolsProvider.overrideWith(
             (ref) async =>
                 LocalToolSnapshot(tools: const [], scannedAt: DateTime(2026)),
@@ -315,6 +318,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+          ...isolatedWorkbenchOverrides(),
           classifiedVersionsProvider.overrideWith((ref) async => []),
           miseCliServiceProvider.overrideWithValue(miseCliService),
         ],
@@ -363,6 +367,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+          ...isolatedWorkbenchOverrides(),
           classifiedVersionsProvider.overrideWith((ref) async => []),
           miseCliServiceProvider.overrideWithValue(miseCliService),
         ],
@@ -404,6 +409,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+          ...isolatedWorkbenchOverrides(),
           localToolsProvider.overrideWith(
             (ref) async =>
                 LocalToolSnapshot(tools: const [], scannedAt: DateTime(2026)),
@@ -442,6 +448,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+          ...isolatedWorkbenchOverrides(),
           localToolsProvider.overrideWith(
             (ref) async =>
                 LocalToolSnapshot(tools: const [], scannedAt: DateTime(2026)),

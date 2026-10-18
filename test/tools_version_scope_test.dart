@@ -1,3 +1,4 @@
+import 'workbench_test_overrides.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -36,7 +37,20 @@ class ScopeProcess implements MiseProcessService {
     calls.add(args);
     var output = '';
     if (args.first == 'ls') {
-      output = jsonEncode(rows);
+      final scoped = rows;
+      if (request.workingDirectory != layout.home &&
+          request.workingDirectory != null) {
+        final config = File('${request.workingDirectory}/mise.toml');
+        if (config.existsSync()) {
+          final version = RegExp(
+            r'node = "([^"]+)"',
+          ).firstMatch(config.readAsStringSync())?.group(1);
+          for (final row in scoped['node'] as List) {
+            row['active'] = row['version'] == version;
+          }
+        }
+      }
+      output = jsonEncode(scoped);
     } else if (args.first == 'use') {
       final project = args[1] == '--path';
       final file = File(project ? args[2] : layout.globalConfigPath);
@@ -164,7 +178,12 @@ void main() {
     project = Directory("$root/Project O'Connor");
     await project.create();
     for (final v in ['99.1.1', '99.1.2']) {
-      await Directory(layout.installTarget('node', v)).create(recursive: true);
+      await Directory(
+        '${layout.installTarget('node', v)}/bin',
+      ).create(recursive: true);
+      await File(
+        '${layout.installTarget('node', v)}/bin/node',
+      ).writeAsString('fixture');
     }
     await File(layout.globalConfigPath).parent.create(recursive: true);
     await File(layout.globalConfigPath).writeAsString('global-original');
@@ -183,6 +202,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          ...isolatedWorkbenchOverrides(),
           miseProcessServiceProvider.overrideWithValue(process),
           miseCliServiceProvider.overrideWithValue(cli),
           historyServiceProvider.overrideWithValue(const ImmediateHistory()),

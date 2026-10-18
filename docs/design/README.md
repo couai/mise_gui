@@ -2,6 +2,14 @@
 
 这些图片由实际 Flutter 页面和应用外壳渲染，使用本机版本配置的测试快照；它们不是运行中的 GUI 截屏。真实应用通过本地识别服务和 mise 查询版本、目录，不读取测试快照。
 
+## 任务中心与管理器设置
+
+![任务中心](tasks.png)
+
+![管理器设置](manager-settings.png)
+
+这两图由真实 Flutter 页面渲染，注入进行中、已完成和需检查的界面测试场景；示例任务不写入用户记录。设置 `DEVWORKBENCH_RENDER_TASKS=1`，结合下方中文与 Material Icons 字体变量，运行 `flutter test test/task_settings_page_test.dart` 可重现。
+
 ## 目录与缓存
 
 ![目录与缓存](storage.png)
@@ -55,6 +63,15 @@ flutter test test/tools_version_management_test.dart
 ```
 
 字体仅在本机加载，不复制到仓库。
+
+## 任务中心与管理器设置验证
+
+2026-10-18，DevWorkbench 1.4.0，macOS ARM64：
+
+- 151 项普通测试通过；显式本机验收在普通测试中跳过，并已单独运行通过。静态分析通过。新验证覆盖任务持久化与中断恢复、输出限制与遮盖、失败／跳过状态、命令成功但验证失败、并发写操作保护、真实 mise 隔离作用域切换、配置回读和冲突保留、设置生效、扫描令牌重建，以及窄窗口和缺少 mise 时的导航。
+- 本机实际版本检查：mise 2026.10.8、Homebrew 7.0.9、Android SDK 管理器 1.0.16500706、Xcode 27.0 均成功返回。管理器当前设置和实际检查任务分别存入分类目录的 `config/managers.json` 与 `state/tasks.json`，文件权限 600。
+- 工具扫描仍识别 45/46 项；6 类运行时的 8 个 SDK 版本和默认选择保持一致。原环境入口、mise 全局配置、扫描目录配置与导入清单校验值保持不变。
+- macOS Release 构建与严格签名校验通过，已更新 `/Applications/DevWorkbench.app` 至 1.4.0（build 14）并验证启动。配置作用范围和后续阶段边界见 [任务与设置约定](../tasks-settings.md)。
 
 ## 目录与缓存验证
 

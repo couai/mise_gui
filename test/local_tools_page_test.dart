@@ -1,3 +1,4 @@
+import 'workbench_test_overrides.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -158,6 +159,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          ...isolatedWorkbenchOverrides(),
           localToolsProvider.overrideWith((ref) async => fixture()),
           localToolOpenerProvider.overrideWithValue(opener),
         ],
@@ -245,6 +247,7 @@ void main() {
       addTearDown(tester.view.reset);
       final container = ProviderContainer(
         overrides: [
+          ...isolatedWorkbenchOverrides(),
           miseAvailableProvider.overrideWith((ref) async => false),
           localToolsProvider.overrideWith((ref) async => fixture()),
           classifiedVersionsProvider.overrideWith((ref) async => []),
@@ -303,6 +306,7 @@ void main() {
       }
       final container = ProviderContainer(
         overrides: [
+          ...isolatedWorkbenchOverrides(),
           miseAvailableProvider.overrideWith((ref) async => true),
           localToolsProvider.overrideWith((ref) async => live ?? fixture()),
           appVersionInfoProvider.overrideWith(
