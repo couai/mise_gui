@@ -9,6 +9,7 @@ import 'package:mise_gui/app/router/app_destination.dart';
 import 'package:mise_gui/app/theme/app_theme.dart';
 import 'package:mise_gui/features/dashboard/application/dashboard_provider.dart';
 import 'package:mise_gui/features/tools/presentation/tools_page.dart';
+import 'package:mise_gui/features/toolchains/application/toolchains_provider.dart';
 import 'package:mise_gui/models/app_models.dart';
 import 'package:mise_gui/services/app_release_service.dart';
 import 'package:mise_gui/services/history_service.dart';
@@ -168,7 +169,10 @@ void main() {
     final service = _PendingToolDetailService();
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [miseCliServiceProvider.overrideWithValue(service)],
+        overrides: [
+          classifiedVersionsProvider.overrideWith((ref) async => []),
+          miseCliServiceProvider.overrideWithValue(service),
+        ],
         child: MaterialApp(
           theme: AppTheme.light(),
           home: const Scaffold(body: ToolsPage()),
@@ -178,7 +182,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Node.js').first);
     await tester.pump(const Duration(milliseconds: 220));
-    expect(find.text('本机版本'), findsOneWidget);
+    expect(find.text('已安装版本'), findsOneWidget);
+    expect(service.requested, isNull);
+    await tester.tap(find.text('可安装').first);
+    await tester.pump(const Duration(milliseconds: 220));
+    expect(service.requested, isNotNull);
+    await tester.tap(find.text('已安装').first);
+    await tester.pump(const Duration(milliseconds: 220));
+    expect(find.text('已安装版本'), findsOneWidget);
     expect(find.text('18.20.4'), findsWidgets);
     expect(service.response.isCompleted, isFalse);
     service.response.complete(
@@ -220,7 +231,9 @@ void main() {
 
     expect(find.text('总览'), findsWidgets);
     expect(find.text('开发工具'), findsWidgets);
-    expect(find.text('工具版本'), findsWidgets);
+    expect(find.text('mise 版本管理'), findsWidgets);
+    expect(find.text('mise 工具链'), findsNothing);
+    expect(find.text('工具版本'), findsNothing);
     expect(find.text('项目'), findsWidgets);
   });
 
@@ -290,6 +303,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+          classifiedVersionsProvider.overrideWith((ref) async => []),
           miseCliServiceProvider.overrideWithValue(miseCliService),
         ],
         child: MaterialApp(
@@ -301,6 +315,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 220));
 
+    await tester.tap(find.text('可安装').first);
+    await tester.pump();
     await tester.tap(find.text('Node.js').first);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 220));
@@ -316,6 +332,8 @@ void main() {
 
     expect(miseCliService.hydrateAttempts, 2);
     expect(find.text('Node.js 详情读取失败'), findsNothing);
+    await tester.tap(find.text('已安装').first);
+    await tester.pumpAndSettle();
     expect(find.text('18.20.4'), findsOneWidget);
     expect(find.byTooltip('查看命令'), findsNothing);
     expect(find.text('查看命令'), findsNothing);
@@ -333,6 +351,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+          classifiedVersionsProvider.overrideWith((ref) async => []),
           miseCliServiceProvider.overrideWithValue(miseCliService),
         ],
         child: MaterialApp(
@@ -344,6 +363,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 220));
 
+    await tester.tap(find.text('可安装').first);
+    await tester.pump();
     await tester.tap(find.text('Node.js').first);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 220));

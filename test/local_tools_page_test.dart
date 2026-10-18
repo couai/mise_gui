@@ -12,6 +12,7 @@ import 'package:mise_gui/features/local_tools/application/local_tools_provider.d
 import 'package:mise_gui/features/local_tools/presentation/local_tools_page.dart';
 import 'package:mise_gui/features/toolchains/application/toolchains_provider.dart';
 import 'package:mise_gui/models/local_tool.dart';
+import 'package:mise_gui/models/app_models.dart';
 import 'package:mise_gui/services/local_tool_process.dart';
 import 'package:mise_gui/services/local_tool_inventory.dart';
 import 'package:mise_gui/services/mise_process_service.dart';
@@ -270,7 +271,7 @@ void main() {
             .value
             .uri
             .toString(),
-        '/toolchains?tool=java',
+        '/tools?tool=java',
       );
       expect(find.text('这台电脑还没有安装 mise'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
@@ -304,6 +305,14 @@ void main() {
         overrides: [
           miseAvailableProvider.overrideWith((ref) async => true),
           localToolsProvider.overrideWith((ref) async => live ?? fixture()),
+          appVersionInfoProvider.overrideWith(
+            (ref) async => const AppVersionInfo(
+              appName: 'DevWorkbench',
+              packageName: 'com.couai.miseGui',
+              version: '1.1.1',
+              buildNumber: '11',
+            ),
+          ),
         ],
       );
       addTearDown(container.dispose);

@@ -15,9 +15,9 @@ MISE_GUI_PREVIEW_MATERIAL_FONT="$(mise where flutter)/bin/cache/artifacts/materi
 flutter test test/local_tools_page_test.dart
 ```
 
-## 分类工具链
+## mise 版本管理
 
-![分类工具链](toolchains-overview.png)
+![mise 版本管理](mise-version-management.png)
 
 ## Flutter 与配套 Dart
 
@@ -28,7 +28,7 @@ flutter test test/local_tools_page_test.dart
 普通界面测试：
 
 ```sh
-flutter test test/toolchains_page_test.dart
+flutter test test/tools_version_management_test.dart
 ```
 
 生成图片时，通过环境变量传入本机中文字体和当前 Flutter SDK 自带的 Material Icons 字体：
@@ -37,12 +37,22 @@ flutter test test/toolchains_page_test.dart
 MISE_GUI_RENDER_PREVIEW=1 \
 MISE_GUI_PREVIEW_CJK_FONT="<本机 PingFang.ttc 路径>" \
 MISE_GUI_PREVIEW_MATERIAL_FONT="$(mise where flutter)/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf" \
-flutter test test/toolchains_page_test.dart
+flutter test test/tools_version_management_test.dart
 ```
 
 字体仅在本机加载，不复制到仓库。
 
-## DevWorkbench 验证记录
+## mise 版本管理合并验证
+
+2026-10-18，DevWorkbench 1.1.1，macOS ARM64：
+
+- 两个重复入口合并为一个，保留原工具版本页的工具列表、展开详情和版本卡片；分为“已安装”“可安装”。
+- 90 项测试和静态分析通过，覆盖旧链接重定向、重复工具定位、HOME 全局清单、目录详情、远端失败时的本地操作、空安装环境，以及项目／全局切换和取消安装预览。
+- 切换和安装流程在隔离目录验证；包含带空格及单引号的项目路径，确认不会隐式下载或改变其他作用域。
+- 版本切换继续复用分类策略，旧的独立分类工具链页面及其预览已移除。
+- macOS Release 构建及严格签名校验通过，已更新 `/Applications/DevWorkbench.app` 并验证新进程启动；现有 SDK、全局版本选择和环境配置校验通过。
+
+## 原 DevWorkbench 工作台阶段验证记录
 
 2026-10-18，macOS ARM64，Flutter 3.47.7：
 

@@ -454,7 +454,7 @@ class _ToolDetailState extends ConsumerState<_ToolDetail> {
                 ),
               if (t.miseTool != null && t.versions.isNotEmpty)
                 OutlinedButton.icon(
-                  onPressed: () => context.go('/toolchains?tool=${t.miseTool}'),
+                  onPressed: () => context.go('/tools?tool=${t.miseTool}'),
                   icon: const Icon(Icons.swap_horiz, size: 17),
                   label: const Text('版本管理'),
                 ),

@@ -110,7 +110,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('安装工具'));
+      await tester.tap(find.text('安装版本'));
       await tester.pumpAndSettle();
       expect(find.text('安装后会直接写成全局默认版本。'), findsNothing);
       await tester.enterText(find.widgetWithText(TextField, 'Tool'), 'node');

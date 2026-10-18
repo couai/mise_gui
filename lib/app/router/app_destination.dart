@@ -15,16 +15,9 @@ enum AppDestination {
     icon: Icons.widgets_outlined,
     selectedIcon: Icons.widgets_rounded,
   ),
-  toolchains(
-    label: 'mise 工具链',
-    description: '分类工具链',
-    path: '/toolchains',
-    icon: Icons.account_tree_outlined,
-    selectedIcon: Icons.account_tree_rounded,
-  ),
   tools(
-    label: '工具版本',
-    description: 'mise 版本安装',
+    label: 'mise 版本管理',
+    description: '已安装与可安装版本',
     path: '/tools',
     icon: Icons.handyman_outlined,
     selectedIcon: Icons.handyman_rounded,

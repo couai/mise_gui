@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:mise_gui/features/local_tools/presentation/local_tools_page.dart';
-import 'package:mise_gui/features/toolchains/presentation/toolchains_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mise_gui/app/router/app_destination.dart';
@@ -19,6 +18,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     navigatorKey: ref.watch(rootNavigatorKeyProvider),
     initialLocation: AppDestination.dashboard.path,
     routes: [
+      GoRoute(
+        path: '/toolchains',
+        redirect: (context, state) => Uri(
+          path: AppDestination.tools.path,
+          queryParameters: state.uri.queryParameters.isEmpty
+              ? null
+              : state.uri.queryParameters,
+        ).toString(),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return AppShell(navigationShell: navigationShell);
@@ -43,18 +51,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: AppDestination.toolchains.path,
-                builder: (context, state) => ToolchainsPage(
-                  initialTool: state.uri.queryParameters['tool'],
-                ),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
                 path: AppDestination.tools.path,
-                builder: (context, state) => const ToolsPage(),
+                builder: (context, state) => ToolsPage(
+                  initialTool: state.uri.queryParameters['tool'],
+                  initialTab: state.uri.queryParameters['tab'],
+                ),
               ),
             ],
           ),

@@ -190,12 +190,14 @@ class LiveMiseCliService implements MiseCliService {
 
   @override
   Future<List<ToolRecord>> fetchTools() async {
-    final installedTools = await _queryService.fetchInstalledTools();
+    final installedTools = await _queryService.fetchInstalledTools(
+      workingDirectory: ToolchainLayout.current.home,
+    );
     final tools = <ToolRecord>[];
 
     for (final entry in installedTools.entries) {
       final tool = entry.key;
-      final versions = entry.value;
+      final versions = entry.value.where((v) => v.installed).toList();
       final active = _resolveActiveVersion(versions);
       if (active == null) continue;
 

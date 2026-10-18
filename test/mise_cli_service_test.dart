@@ -3,6 +3,7 @@ import 'package:mise_gui/models/app_models.dart';
 import 'package:mise_gui/services/mise_cli_service.dart';
 import 'package:mise_gui/services/mise_process_service.dart';
 import 'package:mise_gui/services/mise_query_service.dart';
+import 'package:mise_gui/services/toolchain_layout.dart';
 
 class _FakeProcessService implements MiseProcessService {
   const _FakeProcessService(
@@ -236,7 +237,50 @@ ToolRecord _flutterFixture(String version) => ToolRecord(
   level: HealthLevel.info,
 );
 
+class _GlobalInventoryQuery extends _FakeQueryService {
+  String? directory;
+  @override
+  Future<Map<String, List<MiseInstalledToolVersionRef>>> fetchInstalledTools({
+    String? workingDirectory,
+  }) async {
+    directory = workingDirectory;
+    return {
+      'node': const [
+        MiseInstalledToolVersionRef(
+          tool: 'node',
+          version: '99.1.2',
+          installed: true,
+          active: false,
+        ),
+        MiseInstalledToolVersionRef(
+          tool: 'node',
+          version: '99.1.3',
+          installed: false,
+          active: true,
+        ),
+      ],
+    };
+  }
+}
+
 void main() {
+  test(
+    'installed inventory uses HOME scope and excludes unresolved versions',
+    () async {
+      final query = _GlobalInventoryQuery();
+      final service = LiveMiseCliService(
+        queryService: query,
+        processService: const _FakeProcessService(
+          ShellEnvironmentLoadResult(source: ShellEnvironmentSource.shell),
+        ),
+      );
+      final tools = await service.fetchTools();
+      expect(query.directory, ToolchainLayout.current.home);
+      expect(tools.single.installedVersions.single.version, '99.1.2');
+      expect(tools.single.installedVersions.single.isActive, isFalse);
+    },
+  );
+
   test(
     'explicit null clears a stale update while omitted value preserves it',
     () {
