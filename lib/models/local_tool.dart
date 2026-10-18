@@ -12,15 +12,33 @@ enum LocalToolCategory {
 
 enum LocalToolStatus { ready, attention, missing, unavailable }
 
+enum ToolLocationKind {
+  installation('安装与命令'),
+  configuration('配置与数据'),
+  cache('缓存'),
+  logs('日志'),
+  other('其他位置');
+
+  const ToolLocationKind(this.label);
+  final String label;
+}
+
 class ToolLocation {
   const ToolLocation({
     required this.label,
     required this.path,
     required this.exists,
     this.application = false,
+    this.kind = ToolLocationKind.other,
   });
   final String label, path;
   final bool exists, application;
+  final ToolLocationKind kind;
+}
+
+class LocalToolRelation {
+  const LocalToolRelation(this.toolId, this.reason);
+  final String toolId, reason;
 }
 
 class LocalToolVersion {
@@ -45,6 +63,8 @@ class LocalTool {
     this.notes = const [],
     this.miseTool,
     this.iconPath,
+    this.relations = const [],
+    this.imported = false,
   });
   final String id, name, description, manager, source;
   final String? version, executable, miseTool, iconPath;
@@ -53,6 +73,8 @@ class LocalTool {
   final List<LocalToolVersion> versions;
   final List<ToolLocation> locations;
   final List<String> notes;
+  final List<LocalToolRelation> relations;
+  final bool imported;
   bool get installed =>
       status == LocalToolStatus.ready || status == LocalToolStatus.attention;
 
@@ -71,7 +93,30 @@ class LocalTool {
     category.label,
     executable ?? '',
     ...locations.map((p) => p.path),
+    ...relations.map((r) => r.reason),
   ].join(' ').toLowerCase().contains(query.trim().toLowerCase());
+
+  LocalTool withProfile({
+    required List<ToolLocation> locations,
+    required List<LocalToolRelation> relations,
+  }) => LocalTool(
+    id: id,
+    name: name,
+    category: category,
+    description: description,
+    status: status,
+    manager: manager,
+    source: source,
+    version: version,
+    executable: executable,
+    versions: versions,
+    locations: locations,
+    notes: notes,
+    miseTool: miseTool,
+    iconPath: iconPath,
+    imported: imported,
+    relations: relations,
+  );
 }
 
 class LocalToolSnapshot {
@@ -83,4 +128,18 @@ class LocalToolSnapshot {
   final List<LocalTool> tools;
   final DateTime scannedAt;
   final List<String> warnings;
+
+  int get installedCount => tools.where((t) => t.installed).length;
+  int get attentionCount => tools
+      .where(
+        (t) =>
+            t.status == LocalToolStatus.attention ||
+            t.status == LocalToolStatus.unavailable,
+      )
+      .length;
+  int get missingCount =>
+      tools.where((t) => t.status == LocalToolStatus.missing).length;
+  int get miseCount =>
+      tools.where((t) => t.installed && t.miseTool != null).length;
+  LocalTool? tool(String id) => tools.where((t) => t.id == id).firstOrNull;
 }

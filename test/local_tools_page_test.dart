@@ -309,8 +309,8 @@ void main() {
             (ref) async => const AppVersionInfo(
               appName: 'DevWorkbench',
               packageName: 'com.couai.miseGui',
-              version: '1.1.1',
-              buildNumber: '11',
+              version: '1.2.0',
+              buildNumber: '12',
             ),
           ),
         ],

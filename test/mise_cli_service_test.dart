@@ -263,7 +263,46 @@ class _GlobalInventoryQuery extends _FakeQueryService {
   }
 }
 
+class _FailedDashboardQuery extends _FakeQueryService {
+  @override
+  Future<Map<String, List<MiseInstalledToolVersionRef>>> fetchInstalledTools({
+    String? workingDirectory,
+  }) async {
+    throw StateError('mise query failed');
+  }
+}
+
 void main() {
+  test(
+    'dashboard query failures are propagated instead of presented as zero installed tools',
+    () async {
+      final service = LiveMiseCliService(
+        queryService: _FailedDashboardQuery(),
+        processService: const _FakeProcessService(
+          ShellEnvironmentLoadResult(source: ShellEnvironmentSource.shell),
+        ),
+      );
+      await expectLater(service.fetchDashboardToolSummary(), throwsStateError);
+    },
+  );
+
+  test(
+    'dashboard counts installed tool families in HOME and excludes unresolved active versions',
+    () async {
+      final query = _GlobalInventoryQuery();
+      final service = LiveMiseCliService(
+        queryService: query,
+        processService: const _FakeProcessService(
+          ShellEnvironmentLoadResult(source: ShellEnvironmentSource.shell),
+        ),
+      );
+      final summary = await service.fetchDashboardToolSummary();
+      expect(query.directory, ToolchainLayout.current.home);
+      expect(summary.installedToolCount, 1);
+      expect(summary.activeToolCount, 0);
+    },
+  );
+
   test(
     'installed inventory uses HOME scope and excludes unresolved versions',
     () async {

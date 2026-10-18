@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:mise_gui/services/classified_toolchain_service.dart';
 import 'package:mise_gui/services/local_tool_inventory.dart';
 import 'package:mise_gui/services/local_tool_process.dart';
+import 'package:mise_gui/services/local_tool_registry.dart';
 import 'package:mise_gui/services/mise_process_service.dart';
 import 'package:mise_gui/services/toolchain_layout.dart';
 
@@ -15,6 +16,10 @@ Future<void> main() async {
   final timer = Stopwatch()..start();
   final result = await SystemLocalToolInventory(
     layout: layout,
+    registry: LocalToolRegistry(
+      file: File('${layout.appDir}/config/imported_tools.json'),
+      process: const SystemLocalToolProcess(),
+    ),
     process: const SystemLocalToolProcess(),
     loadVersions: ClassifiedToolchainService(process, layout).inventory,
   ).scan();

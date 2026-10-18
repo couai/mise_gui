@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mise_gui/app/theme/app_theme.dart';
 import 'package:mise_gui/features/local_tools/application/local_tools_provider.dart';
+import 'package:mise_gui/features/local_tools/presentation/import_tool_dialog.dart';
 import 'package:mise_gui/features/toolchains/application/toolchains_provider.dart';
 import 'package:mise_gui/models/local_tool.dart';
 import 'package:mise_gui/services/toolchain_layout.dart';
@@ -12,7 +13,13 @@ import 'package:mise_gui/shared/ui/app_panel.dart';
 import 'package:mise_gui/shared/ui/tool_logo.dart';
 
 class LocalToolsPage extends ConsumerStatefulWidget {
-  const LocalToolsPage({super.key});
+  const LocalToolsPage({
+    super.key,
+    this.initialTool,
+    this.initialCategory,
+    this.initialStatus,
+  });
+  final String? initialTool, initialCategory, initialStatus;
   @override
   ConsumerState<LocalToolsPage> createState() => _LocalToolsPageState();
 }
@@ -22,8 +29,90 @@ class _LocalToolsPageState extends ConsumerState<LocalToolsPage> {
   String query = '';
   String? selectedId;
   bool installedOnly = true;
+  String? status;
   final search = TextEditingController();
   final catalogScroll = ScrollController();
+  String? _lastScrolledSelection;
+
+  @override
+  void initState() {
+    super.initState();
+    _applyRoute();
+  }
+
+  @override
+  void didUpdateWidget(covariant LocalToolsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTool != widget.initialTool ||
+        oldWidget.initialCategory != widget.initialCategory ||
+        oldWidget.initialStatus != widget.initialStatus) {
+      _applyRoute();
+    }
+  }
+
+  void _applyRoute() {
+    selectedId = widget.initialTool;
+    category = LocalToolCategory.values
+        .where((c) => c.name == widget.initialCategory)
+        .firstOrNull;
+    status =
+        const ['attention', 'missing', 'ready'].contains(widget.initialStatus)
+        ? widget.initialStatus
+        : null;
+    query = '';
+    search.clear();
+    installedOnly = status != 'missing' && selectedId == null;
+  }
+
+  Future<void> importTool() async {
+    final tools = ref.read(localToolsProvider).valueOrNull?.tools;
+    if (tools == null) return;
+    final id = await showDialog<String>(
+      context: context,
+      builder: (_) => ImportToolDialog(knownTools: tools),
+    );
+    if (!mounted || id == null) return;
+    selectTool(id);
+    ref.invalidate(localToolsProvider);
+  }
+
+  void selectTool(String id) {
+    setState(() {
+      selectedId = id;
+      category = null;
+      status = null;
+      installedOnly = false;
+      query = '';
+      search.clear();
+    });
+    _syncRoute();
+  }
+
+  void _syncRoute() {
+    GoRouter.maybeOf(context)?.go(
+      Uri(
+        path: '/local-tools',
+        queryParameters: {
+          if (selectedId != null) 'tool': selectedId!,
+          if (category != null) 'category': category!.name,
+          if (status != null) 'status': status!,
+        },
+      ).toString(),
+    );
+  }
+
+  bool _visible(LocalTool t, {LocalToolCategory? inCategory}) =>
+      (inCategory == null || t.category == inCategory) &&
+      (status == null ||
+          (status == 'attention' &&
+              (t.status == LocalToolStatus.attention ||
+                  t.status == LocalToolStatus.unavailable)) ||
+          (status == 'missing' && t.status == LocalToolStatus.missing) ||
+          (status == 'ready' && t.status == LocalToolStatus.ready)) &&
+      (!installedOnly ||
+          t.installed ||
+          t.imported ||
+          t.status == LocalToolStatus.unavailable);
 
   @override
   void dispose() {
@@ -44,6 +133,13 @@ class _LocalToolsPageState extends ConsumerState<LocalToolsPage> {
       title: '开发工具',
       description: '本地工具工作台 · 识别、分类、查看详情与快速打开',
       actions: [
+        FilledButton.icon(
+          onPressed: snapshot.hasValue && !snapshot.isLoading
+              ? importTool
+              : null,
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('导入已有工具'),
+        ),
         OutlinedButton.icon(
           onPressed: snapshot.isLoading ? null : refresh,
           icon: const Icon(Icons.refresh_rounded),
@@ -81,14 +177,7 @@ class _LocalToolsPageState extends ConsumerState<LocalToolsPage> {
     final colors = AppTheme.colorsOf(context);
     final installed = snapshot.tools.where((t) => t.installed).length;
     final visible = snapshot.tools
-        .where(
-          (t) =>
-              (category == null || t.category == category) &&
-              (!installedOnly ||
-                  t.installed ||
-                  t.status == LocalToolStatus.unavailable) &&
-              t.matches(query),
-        )
+        .where((t) => _visible(t, inCategory: category) && t.matches(query))
         .toList();
     final selected =
         visible.where((t) => t.id == selectedId).firstOrNull ??
@@ -102,10 +191,7 @@ class _LocalToolsPageState extends ConsumerState<LocalToolsPage> {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             _tag('$installed 个已识别工具', colors.accent),
-            _tag(
-              '${snapshot.tools.where((t) => t.manager.startsWith('mise')).length} 个由 mise 管理',
-              colors.info,
-            ),
+            _tag('${snapshot.miseCount} 个由 mise 管理 / 配套', colors.info),
             Text(
               '本地扫描 ${_time(snapshot.scannedAt)}',
               style: TextStyle(color: colors.textMuted, fontSize: 12),
@@ -113,6 +199,23 @@ class _LocalToolsPageState extends ConsumerState<LocalToolsPage> {
           ],
         ),
         const SizedBox(height: 14),
+        if (status != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: InputChip(
+              label: Text(
+                status == 'attention'
+                    ? '需检查的工具'
+                    : status == 'ready'
+                    ? '可用的工具'
+                    : '未检测到的目录项',
+              ),
+              onDeleted: () {
+                setState(() => status = null);
+                _syncRoute();
+              },
+            ),
+          ),
         Row(
           children: [
             Icon(Icons.folder_outlined, size: 16, color: colors.textMuted),
@@ -145,6 +248,8 @@ class _LocalToolsPageState extends ConsumerState<LocalToolsPage> {
                 : _ToolDetail(
                     key: ValueKey('selected-${selected.id}'),
                     tool: selected,
+                    snapshot: snapshot,
+                    onSelect: selectTool,
                     height: constraints.maxWidth >= 690 ? paneHeight : null,
                   );
             if (wide) {
@@ -205,13 +310,16 @@ class _LocalToolsPageState extends ConsumerState<LocalToolsPage> {
             for (final c in [null, ...LocalToolCategory.values])
               ChoiceChip(
                 label: Text(
-                  '${c?.label ?? '全部工具'}  ${snapshot.tools.where((t) => (c == null || t.category == c) && (!installedOnly || t.installed || t.status == LocalToolStatus.unavailable)).length}',
+                  '${c?.label ?? '全部工具'}  ${snapshot.tools.where((t) => _visible(t, inCategory: c)).length}',
                 ),
                 selected: category == c,
-                onSelected: (_) => setState(() {
-                  category = c;
-                  selectedId = null;
-                }),
+                onSelected: (_) {
+                  setState(() {
+                    category = c;
+                    selectedId = null;
+                  });
+                  _syncRoute();
+                },
               ),
           ],
         ),
@@ -225,6 +333,30 @@ class _LocalToolsPageState extends ConsumerState<LocalToolsPage> {
     double listHeight,
   ) {
     final colors = AppTheme.colorsOf(context);
+    final itemExtent = 88.0 * MediaQuery.textScalerOf(context).scale(1);
+    final index = visible.indexWhere((t) => t.id == selected?.id);
+    final selection = '${selected?.id}:$index:${visible.length}';
+    if (selectedId != null &&
+        index >= 0 &&
+        _lastScrolledSelection != selection) {
+      _lastScrolledSelection = selection;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted ||
+            !catalogScroll.hasClients ||
+            _lastScrolledSelection != selection) {
+          return;
+        }
+        final position = catalogScroll.position;
+        final start = index * itemExtent;
+        final end = start + itemExtent;
+        final target = start < position.pixels
+            ? start
+            : end > position.pixels + position.viewportDimension
+            ? end - position.viewportDimension
+            : position.pixels;
+        catalogScroll.jumpTo(target.clamp(0, position.maxScrollExtent));
+      });
+    }
     return AppPanel(
       padding: const EdgeInsets.all(14),
       radius: 16,
@@ -257,7 +389,7 @@ class _LocalToolsPageState extends ConsumerState<LocalToolsPage> {
                 style: TextStyle(color: colors.textMuted, fontSize: 12),
               ),
               const Spacer(),
-              const Text('仅已识别', style: TextStyle(fontSize: 12)),
+              const Text('已安装或登记', style: TextStyle(fontSize: 12)),
               const SizedBox(width: 6),
               Switch(
                 value: installedOnly,
@@ -279,6 +411,7 @@ class _LocalToolsPageState extends ConsumerState<LocalToolsPage> {
                 thumbVisibility: true,
                 child: ListView(
                   controller: catalogScroll,
+                  itemExtent: itemExtent,
                   padding: EdgeInsets.zero,
                   children: [
                     for (final tool in visible)
@@ -292,7 +425,10 @@ class _LocalToolsPageState extends ConsumerState<LocalToolsPage> {
                           child: InkWell(
                             key: ValueKey('local-tool-${tool.id}'),
                             borderRadius: BorderRadius.circular(12),
-                            onTap: () => setState(() => selectedId = tool.id),
+                            onTap: () {
+                              setState(() => selectedId = tool.id);
+                              _syncRoute();
+                            },
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 10,
@@ -309,6 +445,8 @@ class _LocalToolsPageState extends ConsumerState<LocalToolsPage> {
                                       children: [
                                         Text(
                                           tool.name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -371,7 +509,15 @@ class _LocalToolsPageState extends ConsumerState<LocalToolsPage> {
 }
 
 class _ToolDetail extends ConsumerStatefulWidget {
-  const _ToolDetail({super.key, required this.tool, this.height});
+  const _ToolDetail({
+    super.key,
+    required this.tool,
+    required this.snapshot,
+    required this.onSelect,
+    this.height,
+  });
+  final LocalToolSnapshot snapshot;
+  final ValueChanged<String> onSelect;
   final LocalTool tool;
   final double? height;
   @override
@@ -403,6 +549,60 @@ class _ToolDetailState extends ConsumerState<_ToolDetail> {
     } finally {
       if (mounted) setState(() => opening = false);
     }
+  }
+
+  Future<void> forget() async {
+    setState(() => opening = true);
+    try {
+      await ref.read(localToolRegistryProvider).forget(widget.tool.id);
+      if (mounted) ref.invalidate(localToolsProvider);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('移除登记失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => opening = false);
+    }
+  }
+
+  Widget relationRow(LocalToolRelation relation) {
+    final target = widget.snapshot.tool(relation.toolId);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  target?.name ?? relation.toolId,
+                  style: const TextStyle(fontSize: 13),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${relation.reason} · ${target?.statusLabel ?? '未纳入清单'}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    height: 1.5,
+                    color: AppTheme.colorsOf(context).textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (target != null)
+            IconButton(
+              tooltip: '查看${target.name}档案',
+              onPressed: () => widget.onSelect(target.id),
+              icon: const Icon(Icons.arrow_forward_rounded, size: 17),
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -482,6 +682,34 @@ class _ToolDetailState extends ConsumerState<_ToolDetail> {
           ),
           _fact('管理方式', t.manager),
           _fact('来源', t.source),
+          if (t.imported)
+            TextButton.icon(
+              onPressed: opening ? null : forget,
+              icon: const Icon(Icons.remove_circle_outline, size: 16),
+              label: const Text('移除登记（保留程序和数据）'),
+            ),
+          if (t.relations.isNotEmpty ||
+              widget.snapshot.tools.any(
+                (other) =>
+                    other.relations.any((r) => r.toolId == t.id) &&
+                    !t.relations.any((r) => r.toolId == other.id),
+              )) ...[
+            const SizedBox(height: 16),
+            Text('依赖与关联', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            for (final relation in t.relations) relationRow(relation),
+            for (final other in widget.snapshot.tools.where(
+              (other) =>
+                  other.relations.any((r) => r.toolId == t.id) &&
+                  !t.relations.any((r) => r.toolId == other.id),
+            ))
+              relationRow(
+                LocalToolRelation(
+                  other.id,
+                  '关联此工具 · ${other.relations.firstWhere((r) => r.toolId == t.id).reason}',
+                ),
+              ),
+          ],
           if (t.versions.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text('已安装版本', style: Theme.of(context).textTheme.titleSmall),
@@ -510,64 +738,79 @@ class _ToolDetailState extends ConsumerState<_ToolDetail> {
               ),
           ],
           const SizedBox(height: 18),
-          Text('本地目录', style: Theme.of(context).textTheme.titleSmall),
+          Text('目录档案', style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 10),
           if (t.locations.isEmpty) const Text('尚无可打开的本地路径。'),
-          for (final location in t.locations)
+          for (final kind in ToolLocationKind.values.where(
+            (kind) => t.locations.any((p) => p.kind == kind),
+          )) ...[
             Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '${location.label}${location.exists ? '' : ' · 未创建或已移除'}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colors.textMuted,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: '复制${location.label}路径',
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () async {
-                          await Clipboard.setData(
-                            ClipboardData(text: location.path),
-                          );
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('路径已复制')),
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.copy_outlined, size: 15),
-                      ),
-                      IconButton(
-                        tooltip: '打开${location.label}',
-                        visualDensity: VisualDensity.compact,
-                        onPressed: !location.exists || opening
-                            ? null
-                            : () => open(location),
-                        icon: const Icon(Icons.open_in_new, size: 15),
-                      ),
-                    ],
-                  ),
-                  SelectableText(
-                    location.path,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: location.exists
-                          ? colors.textPrimary
-                          : colors.textMuted,
-                      height: 1.5,
-                    ),
-                  ),
-                ],
+              padding: const EdgeInsets.only(top: 8, bottom: 6),
+              child: Text(
+                kind.label,
+                style: TextStyle(
+                  color: colors.info,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
+            for (final location in t.locations.where((p) => p.kind == kind))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${location.label}${location.exists ? '' : ' · 未创建或已移除'}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colors.textMuted,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: '复制${location.label}路径',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () async {
+                            await Clipboard.setData(
+                              ClipboardData(text: location.path),
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('路径已复制')),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.copy_outlined, size: 15),
+                        ),
+                        IconButton(
+                          tooltip: '打开${location.label}',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: !location.exists || opening
+                              ? null
+                              : () => open(location),
+                          icon: const Icon(Icons.open_in_new, size: 15),
+                        ),
+                      ],
+                    ),
+                    SelectableText(
+                      location.path,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: location.exists
+                            ? colors.textPrimary
+                            : colors.textMuted,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
           for (final note in t.notes)
             Padding(
               padding: const EdgeInsets.only(top: 10),

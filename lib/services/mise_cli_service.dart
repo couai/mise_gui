@@ -157,35 +157,19 @@ class LiveMiseCliService implements MiseCliService {
 
   @override
   Future<DashboardToolSummary> fetchDashboardToolSummary() async {
-    try {
-      final installedTools = await _queryService.fetchInstalledTools();
-      var activeToolCount = 0;
-
-      for (final versions in installedTools.values) {
-        if (versions.any((version) => version.active)) {
-          activeToolCount += 1;
-        }
-      }
-
-      return DashboardToolSummary(
-        activeToolCount: activeToolCount,
-        installedToolCount: installedTools.length,
-        commandPreview: 'mise ls --json\nmise current',
-      );
-    } catch (error) {
-      if (isMiseCommandUnavailable(error)) {
-        return const DashboardToolSummary(
-          activeToolCount: 0,
-          installedToolCount: 0,
-          commandPreview: 'mise --version',
-        );
-      }
-      return const DashboardToolSummary(
-        activeToolCount: 0,
-        installedToolCount: 0,
-        commandPreview: 'mise ls --json\nmise current',
-      );
-    }
+    final inventory = await _queryService.fetchInstalledTools(
+      workingDirectory: ToolchainLayout.current.home,
+    );
+    final installed = inventory.values.where(
+      (versions) => versions.any((v) => v.installed),
+    );
+    return DashboardToolSummary(
+      activeToolCount: installed
+          .where((versions) => versions.any((v) => v.installed && v.active))
+          .length,
+      installedToolCount: installed.length,
+      commandPreview: 'mise ls --json\nmise current',
+    );
   }
 
   @override

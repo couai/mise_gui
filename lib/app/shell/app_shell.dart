@@ -30,7 +30,9 @@ class AppShell extends ConsumerWidget {
       orElse: () => false,
     );
 
-    final needsMise = destination != AppDestination.localTools;
+    final needsMise =
+        destination != AppDestination.localTools &&
+        destination != AppDestination.dashboard;
     final showMissing = isMissingMise && needsMise;
 
     return LayoutBuilder(

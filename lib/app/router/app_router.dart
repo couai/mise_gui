@@ -44,7 +44,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppDestination.localTools.path,
-                builder: (context, state) => const LocalToolsPage(),
+                builder: (context, state) => LocalToolsPage(
+                  initialTool: state.uri.queryParameters['tool'],
+                  initialCategory: state.uri.queryParameters['category'],
+                  initialStatus: state.uri.queryParameters['status'],
+                ),
               ),
             ],
           ),

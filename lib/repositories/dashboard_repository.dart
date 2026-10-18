@@ -21,9 +21,21 @@ class DashboardRepository {
   final HistoryService historyService;
 
   Future<DashboardSnapshot> loadDashboard() async {
+    var toolsAvailable = true;
+    var projectsAvailable = true;
     final results = await Future.wait<dynamic>([
-      miseCliService.fetchDashboardToolSummary(),
-      projectsRepository.loadProjects(),
+      miseCliService.fetchDashboardToolSummary().catchError((Object _) {
+        toolsAvailable = false;
+        return const DashboardToolSummary(
+          activeToolCount: 0,
+          installedToolCount: 0,
+          commandPreview: '',
+        );
+      }),
+      projectsRepository.loadProjects().catchError((Object _) {
+        projectsAvailable = false;
+        return <ProjectRecord>[];
+      }),
       _loadOperatingSystemInfo(),
       _loadMiseVersionInfo(),
       historyService.fetchHistory(),
@@ -58,28 +70,40 @@ class DashboardRepository {
           level: HealthLevel.info,
         ),
         SummaryMetric(
-          label: '已装工具',
-          value: '${toolSummary.installedToolCount} 个',
-          caption: '当前已纳入 mise 管理的本地工具。',
-          level: toolSummary.installedToolCount > 0
+          label: 'mise 工具',
+          value: toolsAvailable
+              ? '${toolSummary.installedToolCount} 个'
+              : '暂不可用',
+          caption: toolsAvailable
+              ? '当前已纳入 mise 管理的本地工具。'
+              : 'mise 清单查询失败，其他工具仍可查看。',
+          level: !toolsAvailable
+              ? HealthLevel.warning
+              : toolSummary.installedToolCount > 0
               ? HealthLevel.healthy
               : HealthLevel.info,
         ),
         SummaryMetric(
           label: '项目覆盖',
-          value: projects.isEmpty
+          value: !projectsAvailable
+              ? '暂不可用'
+              : projects.isEmpty
               ? '未配置'
               : overrideCount > 0
               ? '$overrideProjectCount 个项目'
               : '无覆盖',
-          caption: projects.isEmpty
+          caption: !projectsAvailable
+              ? '项目扫描暂不可用，请稍后刷新。'
+              : projects.isEmpty
               ? '还没有配置要扫描的项目目录。'
               : overrideCount > 0
               ? '已扫描 ${projects.length} 个项目，发现 $overrideCount 处覆盖，分布在 $overrideProjectCount 个项目里。'
               : declaredToolCount > 0
               ? '已扫描 ${projects.length} 个项目，没有发现覆盖全局版本的项目。'
               : '已扫描 ${projects.length} 个项目，暂未检测到项目级版本声明。',
-          level: overrideCount > 0
+          level: !projectsAvailable
+              ? HealthLevel.warning
+              : overrideCount > 0
               ? HealthLevel.warning
               : projects.isEmpty
               ? HealthLevel.info

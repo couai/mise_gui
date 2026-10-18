@@ -11,6 +11,8 @@ import 'package:mise_gui/features/dashboard/application/dashboard_provider.dart'
 import 'package:mise_gui/features/tools/presentation/tools_page.dart';
 import 'package:mise_gui/features/toolchains/application/toolchains_provider.dart';
 import 'package:mise_gui/models/app_models.dart';
+import 'package:mise_gui/models/local_tool.dart';
+import 'package:mise_gui/features/local_tools/application/local_tools_provider.dart';
 import 'package:mise_gui/services/app_release_service.dart';
 import 'package:mise_gui/services/history_service.dart';
 import 'package:mise_gui/services/mise_cli_service.dart';
@@ -207,6 +209,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+          localToolsProvider.overrideWith(
+            (ref) async =>
+                LocalToolSnapshot(tools: const [], scannedAt: DateTime(2026)),
+          ),
           appReleaseServiceProvider.overrideWithValue(
             const _FakeAppReleaseService(),
           ),
@@ -263,6 +269,9 @@ void main() {
       tester.element(find.byKey(const ValueKey('dashboard-metric-tools'))),
     );
 
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('dashboard-metric-tools')),
+    );
     await tester.tap(find.byKey(const ValueKey('dashboard-metric-tools')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
@@ -281,6 +290,9 @@ void main() {
       tester.element(find.byKey(const ValueKey('dashboard-metric-projects'))),
     );
 
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('dashboard-metric-projects')),
+    );
     await tester.tap(find.byKey(const ValueKey('dashboard-metric-projects')));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
@@ -392,6 +404,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+          localToolsProvider.overrideWith(
+            (ref) async =>
+                LocalToolSnapshot(tools: const [], scannedAt: DateTime(2026)),
+          ),
           appReleaseServiceProvider.overrideWithValue(
             const _FakeAppReleaseService(),
           ),
@@ -410,6 +426,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
+    await tester.tap(find.text('mise 版本管理').last);
+    await tester.pumpAndSettle();
     expect(find.text('这台电脑还没有安装 mise'), findsOneWidget);
     expect(find.text(recommendedMiseInstallCommand()), findsOneWidget);
   });
@@ -424,6 +442,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+          localToolsProvider.overrideWith(
+            (ref) async =>
+                LocalToolSnapshot(tools: const [], scannedAt: DateTime(2026)),
+          ),
           appReleaseServiceProvider.overrideWithValue(
             const _FakeAppReleaseService(),
           ),
@@ -442,6 +464,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
+    await tester.tap(find.text('mise 版本管理').last);
+    await tester.pumpAndSettle();
     expect(find.text('这台电脑还没有安装 mise'), findsOneWidget);
     expect(find.text('安装完成后你会立刻看到'), findsNothing);
   });

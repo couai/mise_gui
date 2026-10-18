@@ -2,6 +2,14 @@
 
 这些图片由实际 Flutter 页面和应用外壳渲染，使用本机版本配置的测试快照；它们不是运行中的 GUI 截屏。真实应用通过本地识别服务和 mise 查询版本、目录，不读取测试快照。
 
+## 统一总览与工具档案
+
+![统一总览](environment-overview.png)
+
+![工具档案](tool-profile.png)
+
+设置 `DEVWORKBENCH_RENDER_PREVIEW=1` 运行 `test/workbench_overview_test.dart` 可生成以上两图，字体环境变量与下方工作台预览相同。该模式只读查询本机工具、系统与现有项目信息；普通测试使用隔离快照。
+
 ## DevWorkbench 工具工作台
 
 ![DevWorkbench](dev-workbench.png)
@@ -41,6 +49,16 @@ flutter test test/tools_version_management_test.dart
 ```
 
 字体仅在本机加载，不复制到仓库。
+
+## 统一总览与工具档案验证
+
+2026-10-18，DevWorkbench 1.2.0，macOS ARM64：
+
+- 107 项测试、静态分析、macOS Release 构建及严格签名校验通过。新测试覆盖共享清单、分类/状态筛选、重复跳转、导入后列表定位、窄窗口、mise 缺失、导入持久化及原子保存、软链接去重、CLI 不执行、损坏清单保留和 IDE 版本目录识别。
+- 真实扫描仍识别 45/46 项工具，6 类运行时的 8 个 SDK 版本及全局选择保持一致；环境入口、mise 全局配置与现有项目扫描配置的校验值不变。
+- 保留原系统信息、项目覆盖和最近活动，统一总览新增所有支持工具的分类与状态统计。修复 mise 查询失败被显示为“0 个工具”，并在 HOME 作用域统计已安装工具。
+- `/Applications/DevWorkbench.app` 已更新到 1.2.0（build 12）并验证启动；没有更改现有工具安装或项目依赖。应用配置沿用分类目录，导入仅保存登记信息。
+- 此步骤不增加缓存体积统计、缓存清理、跨管理器安装/更新或任务中心；它们继续按后续阶段实现。
 
 ## mise 版本管理合并验证
 

@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:mise_gui/models/local_tool.dart';
 import 'package:mise_gui/services/classified_toolchain_service.dart';
 import 'package:mise_gui/services/local_tool_process.dart';
+import 'package:mise_gui/services/local_tool_profiles.dart';
+import 'package:mise_gui/services/local_tool_registry.dart';
 import 'package:mise_gui/services/toolchain_layout.dart';
 
 abstract interface class LocalToolInventory {
@@ -19,12 +21,14 @@ class SystemLocalToolInventory implements LocalToolInventory {
     required this.loadVersions,
     this.applications = '/Applications',
     this.fallbackBins = const ['/opt/homebrew/bin', '/usr/bin', '/bin'],
+    this.registry,
   });
   final ToolchainLayout layout;
   final LocalToolProcess process;
   final Future<List<ClassifiedVersion>> Function() loadVersions;
   final String applications;
   final List<String> fallbackBins;
+  final LocalToolRegistry? registry;
 
   Map<String, String> get _environment => {
     ...layout.environment,
@@ -60,7 +64,9 @@ class SystemLocalToolInventory implements LocalToolInventory {
         final index = next++;
         final spec = specs[index];
         try {
-          tools[index] = await _inspect(spec, versions, runtimeBins);
+          tools[index] = await LocalToolProfiles(
+            layout,
+          ).enrich(await _inspect(spec, versions, runtimeBins));
         } catch (_) {
           tools[index] = _tool(
             spec,
@@ -72,8 +78,14 @@ class SystemLocalToolInventory implements LocalToolInventory {
     }
 
     await Future.wait(List.generate(4, (_) => worker()));
+    final imported = <LocalTool>[];
+    try {
+      imported.addAll(await registry?.scan() ?? []);
+    } catch (_) {
+      warnings.add('手动导入清单读取失败；内置工具继续显示，原清单未被覆盖。');
+    }
     return LocalToolSnapshot(
-      tools: tools.whereType<LocalTool>().toList(),
+      tools: [...tools.whereType<LocalTool>(), ...imported],
       scannedAt: DateTime.now(),
       warnings: warnings,
     );

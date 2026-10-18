@@ -6,11 +6,12 @@ import 'package:go_router/go_router.dart';
 import 'package:mise_gui/app/router/app_destination.dart';
 import 'package:mise_gui/app/theme/app_theme.dart';
 import 'package:mise_gui/features/dashboard/application/dashboard_provider.dart';
+import 'package:mise_gui/features/dashboard/presentation/local_environment_overview.dart';
+import 'package:mise_gui/features/local_tools/application/local_tools_provider.dart';
 import 'package:mise_gui/models/app_models.dart';
 import 'package:mise_gui/services/mise_process_service.dart';
 import 'package:mise_gui/shared/ui/app_page_scaffold.dart';
 import 'package:mise_gui/shared/ui/app_panel.dart';
-import 'package:mise_gui/shared/ui/async_state_view.dart';
 import 'package:mise_gui/shared/ui/recent_history_dialog.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
@@ -23,7 +24,7 @@ class DashboardPage extends ConsumerStatefulWidget {
 class _DashboardPageState extends ConsumerState<DashboardPage>
     with WidgetsBindingObserver {
   static const _refreshDebounce = Duration(seconds: 1);
-  static const _autoRefreshInterval = Duration(seconds: 5);
+  static const _autoRefreshInterval = Duration(seconds: 60);
 
   DateTime? _lastRefreshAt;
   var _refreshing = false;
@@ -97,7 +98,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
 
     try {
       final refreshed = ref.refresh(dashboardProvider.future);
-      await refreshed;
+      final local = ref.refresh(localToolsProvider.future);
+      await Future.wait([refreshed, local]);
       if (!silent) {
         _showFeedback('环境数据已刷新。');
       }
@@ -159,25 +161,43 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
   Widget build(BuildContext context) {
     final snapshot = ref.watch(dashboardProvider);
 
-    return AsyncStateView(
-      value: snapshot,
-      builder: (data) => AppPageScaffold(
-        title: '环境总览',
-        description: '',
-        actions: [
-          OutlinedButton.icon(
-            onPressed: _handleRefresh,
-            icon: _refreshing
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh_rounded),
-            label: Text(_refreshing ? '刷新中...' : '刷新环境数据'),
+    return AppPageScaffold(
+      title: '环境总览',
+      description: '运行时、构建工具、IDE 与移动开发环境的统一清单。',
+      actions: [
+        OutlinedButton.icon(
+          onPressed: _handleRefresh,
+          icon: _refreshing
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.refresh_rounded),
+          label: Text(_refreshing ? '刷新中...' : '刷新环境数据'),
+        ),
+      ],
+      child: Column(
+        children: [
+          const LocalEnvironmentOverview(),
+          const SizedBox(height: 24),
+          snapshot.when(
+            data: (data) => _DashboardOverview(snapshot: data),
+            loading: () => const LinearProgressIndicator(),
+            error: (_, _) => AppPanel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('mise 与项目统计暂不可用，本地工具清单仍可使用。'),
+                  TextButton(
+                    onPressed: () => ref.invalidate(dashboardProvider),
+                    child: const Text('重试环境统计'),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
-        child: _DashboardOverview(snapshot: data),
       ),
     );
   }
@@ -192,39 +212,6 @@ class _DashboardOverview extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        AppPanel(
-          child: Row(
-            children: [
-              Icon(
-                Icons.widgets_outlined,
-                color: AppTheme.colorsOf(context).accent,
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '本地开发工具',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(height: 6),
-                    Text('统一查看运行时、构建工具、IDE 和移动开发环境。'),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              OutlinedButton(
-                onPressed: () => context.go('/local-tools'),
-                child: const Text('打开工具工作台'),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
         _DashboardMetricGrid(metrics: snapshot.metrics),
         const SizedBox(height: 28),
         _RecentHistoryPanel(entries: snapshot.recentHistory),
@@ -499,6 +486,7 @@ class _DashboardMetricCard extends StatelessWidget {
 
   AppDestination? _destinationFor(String label) {
     switch (label) {
+      case 'mise 工具':
       case '已装工具':
         return AppDestination.tools;
       case '项目覆盖':
@@ -510,6 +498,7 @@ class _DashboardMetricCard extends StatelessWidget {
 
   Key? _keyFor(String label) {
     switch (label) {
+      case 'mise 工具':
       case '已装工具':
         return const ValueKey('dashboard-metric-tools');
       case '项目覆盖':
@@ -964,6 +953,7 @@ IconData _iconForMetric(String label) {
   switch (label) {
     case '当前系统':
       return Icons.desktop_windows_rounded;
+    case 'mise 工具':
     case '已装工具':
       return Icons.extension_rounded;
     case '项目覆盖':
