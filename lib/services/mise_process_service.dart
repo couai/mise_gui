@@ -316,15 +316,14 @@ class LocalMiseProcessService implements MiseProcessService {
       );
     }
 
-    final localAppData = Platform.environment['LOCALAPPDATA'];
-    if (localAppData == null || localAppData.isEmpty) {
+    final shimPath = resolveWindowsMiseShimPath(Platform.environment);
+    if (shimPath == null) {
       return const WindowsShimPathStatus(
         source: WindowsShimPathSource.missing,
         detail: '当前还没法确认 Windows 终端是否已经接入 mise。可以先查看修复命令，按提示补齐后再重开终端。',
       );
     }
 
-    final shimPath = '$localAppData\\mise\\shims';
     final path = Platform.environment['PATH'] ?? '';
     final pathEntries = path
         .split(';')
@@ -561,21 +560,20 @@ class LocalMiseProcessService implements MiseProcessService {
       environment['HOME'] = homeDirectory;
     }
 
+    final layout = ToolchainLayout(
+      home: homeDirectory ?? ToolchainLayout.current.home,
+      environment: mergedEnvironment,
+    );
     environment.addAll(
-      readConfiguredMiseProxyEnvironmentSync(homeDirectory: homeDirectory),
+      readConfiguredMiseProxyEnvironmentSync(
+        configPath: layout.globalConfigPath,
+      ),
     );
     environment['PATH'] = pathEntries.join((Platform.isWindows ? ';' : ':'));
-    final layout = ToolchainLayout.current;
     environment.putIfAbsent('MISE_CONFIG_DIR', () => layout.configDir);
     environment.putIfAbsent('MISE_DATA_DIR', () => layout.dataDir);
-    environment.putIfAbsent(
-      'MISE_CACHE_DIR',
-      () => '${layout.root}/mise/cache',
-    );
-    environment.putIfAbsent(
-      'MISE_STATE_DIR',
-      () => '${layout.root}/mise/state',
-    );
+    environment.putIfAbsent('MISE_CACHE_DIR', () => layout.cacheDir);
+    environment.putIfAbsent('MISE_STATE_DIR', () => layout.stateDir);
     environment.putIfAbsent('CARGO_HOME', () => layout.cargoHome);
     environment.putIfAbsent('RUSTUP_HOME', () => layout.rustupHome);
     return environment;
@@ -710,10 +708,24 @@ Write-Host '已写入用户 PATH，请关闭并重新打开 cmd / PowerShell 后
   }
 }
 
+String? resolveWindowsMiseShimPath(Map<String, String> environment) {
+  final data =
+      environment['MISE_DATA_DIR'] ??
+      (environment['XDG_DATA_HOME'] == null
+          ? null
+          : '${environment['XDG_DATA_HOME']}/mise') ??
+      (environment['LOCALAPPDATA'] == null
+          ? null
+          : '${environment['LOCALAPPDATA']}/mise');
+  if (data == null || data.trim().isEmpty) return null;
+  return '${data.replaceAll('/', r'\').replaceFirst(RegExp(r'[\\/]+$'), '')}\\shims';
+}
+
 Map<String, String> readConfiguredMiseProxyEnvironmentSync({
   String? homeDirectory,
+  String? configPath,
 }) {
-  final configPath = _globalMiseConfigPath(homeDirectory: homeDirectory);
+  configPath ??= _globalMiseConfigPath(homeDirectory: homeDirectory);
   if (configPath == null) {
     return const <String, String>{};
   }

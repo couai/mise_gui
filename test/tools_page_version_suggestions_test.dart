@@ -3,6 +3,29 @@ import 'package:mise_gui/features/tools/presentation/tools_page.dart';
 import 'package:mise_gui/services/mise_query_service.dart';
 
 void main() {
+  test('does not fall back to prerelease or Java JRE-only suggestions', () {
+    expect(
+      selectVersionSuggestions(const [
+        MiseRemoteToolVersionRef(
+          tool: 'flutter',
+          version: '3.48.0-beta.1',
+          rolling: false,
+        ),
+      ]),
+      isEmpty,
+    );
+    expect(
+      selectVersionSuggestions(const [
+        MiseRemoteToolVersionRef(
+          tool: 'java',
+          version: 'temurin-21.0.12-jre',
+          rolling: false,
+        ),
+      ]),
+      isEmpty,
+    );
+  });
+
   test('selects the latest release for each major version', () {
     final selected = selectVersionSuggestions(const [
       MiseRemoteToolVersionRef(

@@ -151,6 +151,17 @@ void main() {
     },
   );
 
+  test(
+    'XDG config directory is respected when explicit MISE_CONFIG_DIR is absent',
+    () {
+      final custom = ToolchainLayout(
+        home: temp.path,
+        environment: {'XDG_CONFIG_HOME': '${temp.path}/xdg'},
+      );
+      expect(custom.globalConfigPath, '${temp.path}/xdg/mise/config.toml');
+    },
+  );
+
   test('rejects occupied targets including dangling links', () async {
     final target = layout.installTarget('go', '1.28.0');
     await Directory(target).parent.create(recursive: true);

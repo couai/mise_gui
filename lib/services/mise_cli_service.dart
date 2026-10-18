@@ -277,14 +277,22 @@ class LiveMiseCliService implements MiseCliService {
           ? null
           : <String, dynamic>{'latest': remoteLoad.latestStableVersion},
     );
+    final stableCatalog = _filterRemoteCandidateScope(
+      tool: tool.id,
+      requestedMajor: _leadingMajor(tool.requestedVersion),
+      versions: remoteLoad.versions,
+    ).toList()..sort((a, b) => compareToolVersions(b.version, a.version));
     final resolvedLatestStableVersion =
-        updateVersion ??
-        (selectedRemoteVersions.isNotEmpty
-            ? selectedRemoteVersions.first.version
-            : remoteLoad.latestStableVersion ?? tool.activeVersion);
-    final resolvedLatestPreviewVersion = selectedRemoteVersions.isNotEmpty
-        ? selectedRemoteVersions.last.version
-        : remoteLoad.latestStableVersion ?? tool.activeVersion;
+        remoteLoad.latestStableVersion ??
+        stableCatalog.firstOrNull?.version ??
+        '未获取';
+    final previews =
+        remoteLoad.versions
+            .where((v) => !v.rolling && !isStableToolVersion(v.version))
+            .toList()
+          ..sort((a, b) => compareToolVersions(b.version, a.version));
+    final resolvedLatestPreviewVersion =
+        previews.firstOrNull?.version ?? resolvedLatestStableVersion;
     final pathConflictNotice = _buildPathConflictNotice(
       tool: tool.id,
       miseExecutable: miseExecutable,
@@ -577,7 +585,9 @@ class LiveMiseCliService implements MiseCliService {
     required String? requestedMajor,
     required List<MiseRemoteToolVersionRef> versions,
   }) {
-    final nonRolling = versions.where((version) => !version.rolling);
+    final nonRolling = versions.where(
+      (version) => !version.rolling && isStableToolVersion(version.version),
+    );
 
     if (tool == 'java' && requestedMajor != null) {
       return nonRolling.where(
@@ -587,16 +597,11 @@ class LiveMiseCliService implements MiseCliService {
       );
     }
 
-    if (tool == 'flutter') {
-      final stableVersions = nonRolling
-          .where((version) => version.version.contains('stable'))
-          .toList();
-      return stableVersions.isNotEmpty ? stableVersions : nonRolling;
-    }
+    if (tool == 'flutter') return nonRolling;
 
     if (requestedMajor != null) {
       return nonRolling.where(
-        (version) => version.version.startsWith('$requestedMajor.'),
+        (version) => toolVersionMajor(version.version) == requestedMajor,
       );
     }
 
@@ -820,8 +825,7 @@ class LiveMiseCliService implements MiseCliService {
   }
 
   String? _leadingMajor(String input) {
-    final match = RegExp(r'(\d+)').firstMatch(input);
-    return match?.group(1);
+    return toolVersionMajor(input);
   }
 
   String _basename(String path) {
@@ -850,7 +854,36 @@ class LiveMiseCliService implements MiseCliService {
   }
 }
 
+String _comparableVersion(String value) {
+  final version = value.trim();
+  final start = RegExp(r'\d+(?:\.\d+)+').firstMatch(version)?.start ?? 0;
+  return version
+      .substring(start)
+      .replaceFirst(RegExp(r'-stable$', caseSensitive: false), '');
+}
+
+String? toolVersionMajor(String version) =>
+    RegExp(r'(\d+)').firstMatch(_comparableVersion(version))?.group(1);
+
+bool isStableToolVersion(String version) => !RegExp(
+  r'alpha|beta|preview|snapshot|(?:[.\-+]|\d)(?:dev|rc|pre|ea)(?:[.\-\d]|$)',
+  caseSensitive: false,
+).hasMatch(version);
+
 int compareToolVersions(String left, String right) {
+  final leftCore = RegExp(
+    r'^\d+(?:\.\d+)*',
+  ).stringMatch(_comparableVersion(left));
+  final rightCore = RegExp(
+    r'^\d+(?:\.\d+)*',
+  ).stringMatch(_comparableVersion(right));
+  if (leftCore != null &&
+      rightCore != null &&
+      leftCore == rightCore &&
+      isStableToolVersion(left) != isStableToolVersion(right)) {
+    return isStableToolVersion(left) ? 1 : -1;
+  }
+
   final leftTokens = _VersionToken.parse(left);
   final rightTokens = _VersionToken.parse(right);
   final limit = leftTokens.length > rightTokens.length
@@ -892,6 +925,7 @@ sealed class _VersionToken {
   factory _VersionToken.text(String value) = _TextVersionToken;
 
   static List<_VersionToken> parse(String input) {
+    input = _comparableVersion(input);
     final matches = RegExp(r'\d+|[A-Za-z]+').allMatches(input);
     return matches
         .map((match) {

@@ -1,10 +1,49 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mise_gui/services/mise_process_service.dart';
 import 'package:mise_gui/services/mise_query_service.dart';
 
 void main() {
+  test('Windows shims follow explicit mise or XDG data directories', () {
+    expect(
+      resolveWindowsMiseShimPath({
+        'MISE_DATA_DIR': r'D:\Toolchains\mise',
+        'LOCALAPPDATA': r'C:\Local',
+      }),
+      r'D:\Toolchains\mise\shims',
+    );
+    expect(
+      resolveWindowsMiseShimPath({'XDG_DATA_HOME': r'D:\Data'}),
+      r'D:\Data\mise\shims',
+    );
+    expect(
+      resolveWindowsMiseShimPath({'LOCALAPPDATA': r'C:\Local'}),
+      r'C:\Local\mise\shims',
+    );
+    expect(resolveWindowsMiseShimPath({}), isNull);
+  });
+
+  test(
+    'proxy loader uses the selected custom global configuration path',
+    () async {
+      final root = await Directory.systemTemp.createTemp('mise-proxy-config-');
+      addTearDown(() => root.delete(recursive: true));
+      final file = File('${root.path}/custom/config.toml');
+      await file.parent.create();
+      await file.writeAsString(
+        '[env]\nhttps_proxy = "http://127.0.0.1:9009"\n',
+      );
+      expect(
+        readConfiguredMiseProxyEnvironmentSync(
+          configPath: file.path,
+        )['https_proxy'],
+        'http://127.0.0.1:9009',
+      );
+    },
+  );
+
   test('diagnoses missing make for source builds', () {
     final diagnosis = diagnoseMiseCommandFailure(
       command: 'mise install redis@8.6.2',

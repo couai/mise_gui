@@ -34,7 +34,7 @@ flutter test test/toolchains_page_test.dart
 2026-10-18，macOS ARM64，Flutter 3.47.7 / Dart 3.13.5：
 
 - 真实登录 Shell 与分类目录查询通过，发现 6 类运行时、8 个已安装版本。
-- 静态分析、64 项测试及 macOS Debug / Release 构建通过。测试包含真实 mise 在隔离 HOME、配置和数据目录中的注册、全局切换、项目切换、未知配置段保留，以及安装失败时对并发锁文件的保护。
+- 静态分析、76 项测试及 macOS Debug / Release 构建通过。测试包含真实 mise 在隔离 HOME、配置和数据目录中的注册、全局切换、项目切换、未知配置段保留、安装失败时对并发锁文件的保护，以及工具菜单的安装流程。
 - 安装流程验证了命令计划、目标目录保护、软链接越界保护；没有为测试下载或增加新的 SDK 版本。
 - 上游作者的签名团队已移除，本机采用 ad-hoc 签名。公开分发和公证需另外配置签名证书。
 - 本地 Release 入口为 `bash scripts/build_local_macos.sh`，构建后按由内到外的顺序刷新 App.framework 与应用签名，避免增量构建的旧签名造成校验失败。

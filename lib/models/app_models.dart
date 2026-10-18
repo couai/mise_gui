@@ -1,3 +1,5 @@
+const _unchangedUpdateVersion = Object();
+
 class SummaryMetric {
   const SummaryMetric({
     required this.label,
@@ -274,7 +276,7 @@ class ToolRecord {
     String? commandPreview,
     HealthLevel? level,
     List<InlineNotice>? notices,
-    String? updateVersion,
+    Object? updateVersion = _unchangedUpdateVersion,
     ToolRemoteState? remoteState,
   }) {
     return ToolRecord(
@@ -295,7 +297,9 @@ class ToolRecord {
       commandPreview: commandPreview ?? this.commandPreview,
       level: level ?? this.level,
       notices: notices ?? this.notices,
-      updateVersion: updateVersion ?? this.updateVersion,
+      updateVersion: identical(updateVersion, _unchangedUpdateVersion)
+          ? this.updateVersion
+          : updateVersion as String?,
       remoteState: remoteState ?? this.remoteState,
     );
   }

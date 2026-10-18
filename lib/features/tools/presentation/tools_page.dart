@@ -28,11 +28,12 @@ List<String> selectVersionSuggestions(List<MiseRemoteToolVersionRef> versions) {
       .where(
         (version) =>
             !version.rolling &&
+            isStableToolVersion(version.version) &&
             !(version.tool == 'java' &&
                 _isJavaRuntimeOnlySuggestion(version.version)),
       )
       .toList();
-  final source = stableVersions.isNotEmpty ? stableVersions : versions;
+  final source = stableVersions;
   if (source.isEmpty) {
     return const [];
   }
@@ -57,8 +58,7 @@ List<String> selectVersionSuggestions(List<MiseRemoteToolVersionRef> versions) {
 }
 
 String _majorVersionKey(String input) {
-  final match = RegExp(r'(\d+)').firstMatch(input);
-  return match?.group(1) ?? input;
+  return toolVersionMajor(input) ?? input;
 }
 
 bool _isJavaRuntimeOnlySuggestion(String version) {
@@ -819,48 +819,6 @@ class _ActionLogView extends StatelessWidget {
   }
 }
 
-class _ToolWorkspaceLoading extends StatelessWidget {
-  const _ToolWorkspaceLoading({required this.title, required this.message});
-
-  final String title;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppTheme.colorsOf(context);
-
-    return AppPanel(
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(
-                width: 30,
-                height: 30,
-                child: CircularProgressIndicator(strokeWidth: 2.6),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleLarge,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                message,
-                style: TextStyle(color: colors.textMuted, height: 1.55),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ToolWorkspaceError extends StatelessWidget {
   const _ToolWorkspaceError({required this.toolName, required this.onRetry});
 
@@ -1059,7 +1017,7 @@ class _InstallToolDialogState extends ConsumerState<_InstallToolDialog> {
               controller: _toolController,
               decoration: const InputDecoration(
                 labelText: 'Tool',
-                hintText: '例如: node / python / go / php',
+                hintText: 'java / node / python / go / rust / flutter',
               ),
             ),
             const SizedBox(height: 14),
@@ -1068,7 +1026,7 @@ class _InstallToolDialogState extends ConsumerState<_InstallToolDialog> {
               focusNode: _versionFocusNode,
               decoration: const InputDecoration(
                 labelText: 'Version',
-                hintText: '例如: 20 或 20.19.0 / 3.12 或 3.12.9 / latest',
+                hintText: '精确版本，例如 24.21.0 或 temurin-21.0.12.1+1',
               ),
             ),
             if (_versionFocusNode.hasFocus &&
@@ -1093,7 +1051,7 @@ class _InstallToolDialogState extends ConsumerState<_InstallToolDialog> {
             ],
             const SizedBox(height: 18),
             Text(
-              '安装后会直接写成全局默认版本。',
+              '安装到 ${ToolchainLayout.current.root} 下的对应分类目录；安装后另行选择全局或项目版本。',
               style: TextStyle(
                 color: colors.textMuted,
                 fontSize: 13,
@@ -1132,6 +1090,15 @@ class _InstallToolDialogState extends ConsumerState<_InstallToolDialog> {
       return;
     }
 
+    try {
+      ToolchainLayout.current.categoryRoot(tool);
+      ToolchainLayout.validateVersion(version);
+    } catch (error) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$error')));
+      return;
+    }
     Navigator.of(
       context,
     ).pop(_InstallToolRequest(tool: tool, version: version));
@@ -1409,28 +1376,27 @@ class _ToolAccordionItem extends StatelessWidget {
       return const SizedBox.shrink(key: ValueKey('collapsed-detail'));
     }
 
-    if (detailLoading && hydratedTool == null) {
+    final detailTool = hydratedTool ?? tool;
+    if (hydratedTool == null) {
       return _AccordionDetailShell(
-        key: ValueKey('loading-detail-${tool.id}'),
-        child: _ToolWorkspaceLoading(
-          title: '正在读取 ${tool.name} 的详情',
-          message: '远端版本和详细信息返回后，会在这里展开。',
+        key: ValueKey('local-detail-${tool.id}'),
+        child: Column(
+          children: [
+            if (detailLoading)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 12),
+                child: Text('正在同步远端版本，本机版本可先使用。'),
+              ),
+            if (detailFailed)
+              _ToolWorkspaceError(toolName: tool.name, onRetry: onRetryDetail),
+            _ToolWorkspace(
+              tool: tool,
+              onRetryDetail: onRetryDetail,
+              onOpenPreview: onOpenPreview,
+            ),
+          ],
         ),
       );
-    }
-
-    final detailTool = hydratedTool;
-    if (detailTool == null) {
-      if (detailFailed) {
-        return _AccordionDetailShell(
-          key: ValueKey('failed-detail-${tool.id}'),
-          child: _ToolWorkspaceError(
-            toolName: tool.name,
-            onRetry: onRetryDetail,
-          ),
-        );
-      }
-      return const SizedBox.shrink(key: ValueKey('empty-detail'));
     }
 
     return _AccordionDetailShell(

@@ -26,16 +26,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: AppDestination.toolchains.path,
-                builder: (context, state) => const ToolchainsPage(),
+                path: AppDestination.dashboard.path,
+                builder: (context, state) => const DashboardPage(),
               ),
             ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: AppDestination.dashboard.path,
-                builder: (context, state) => const DashboardPage(),
+                path: AppDestination.toolchains.path,
+                builder: (context, state) => const ToolchainsPage(),
               ),
             ],
           ),

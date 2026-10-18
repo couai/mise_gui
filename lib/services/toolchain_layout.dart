@@ -16,9 +16,27 @@ class ToolchainLayout {
   final Map<String, String> environment;
   String get root =>
       environment['MISE_GUI_TOOLCHAINS_ROOT'] ?? '$home/Developer/toolchains';
-  String get configDir => environment['MISE_CONFIG_DIR'] ?? '$root/mise/config';
+  String get configDir =>
+      environment['MISE_CONFIG_DIR'] ??
+      (environment['XDG_CONFIG_HOME'] == null
+          ? '$root/mise/config'
+          : '${environment['XDG_CONFIG_HOME']}/mise');
   String get globalConfigPath => '$configDir/config.toml';
-  String get dataDir => environment['MISE_DATA_DIR'] ?? '$root/mise/data';
+  String get dataDir =>
+      environment['MISE_DATA_DIR'] ??
+      (environment['XDG_DATA_HOME'] == null
+          ? '$root/mise/data'
+          : '${environment['XDG_DATA_HOME']}/mise');
+  String get cacheDir =>
+      environment['MISE_CACHE_DIR'] ??
+      (environment['XDG_CACHE_HOME'] == null
+          ? '$root/mise/cache'
+          : '${environment['XDG_CACHE_HOME']}/mise');
+  String get stateDir =>
+      environment['MISE_STATE_DIR'] ??
+      (environment['XDG_STATE_HOME'] == null
+          ? '$root/mise/state'
+          : '${environment['XDG_STATE_HOME']}/mise');
   String get appDir => '$root/mise-gui';
   String get cargoHome => environment['CARGO_HOME'] ?? '$root/rust/cargo';
   String get rustupHome => environment['RUSTUP_HOME'] ?? '$root/rust/rustup';

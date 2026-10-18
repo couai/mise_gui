@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -172,7 +173,50 @@ const _dashboardSnapshot = DashboardSnapshot(
   riskHighlights: [],
 );
 
+class _PendingToolDetailService extends MockMiseCliService {
+  final response = Completer<ToolRecord>();
+  ToolRecord? requested;
+  @override
+  Future<ToolRecord> hydrateToolRemoteState(ToolRecord tool) {
+    requested = tool;
+    return response.future;
+  }
+}
+
 void main() {
+  test('dashboard is first in navigation order', () {
+    expect(AppDestination.values.first, AppDestination.dashboard);
+  });
+
+  testWidgets('local versions remain usable while remote detail is pending', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final service = _PendingToolDetailService();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [miseCliServiceProvider.overrideWithValue(service)],
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const Scaffold(body: ToolsPage()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Node.js').first);
+    await tester.pump(const Duration(milliseconds: 220));
+    expect(find.text('本机版本'), findsOneWidget);
+    expect(find.text('18.20.4'), findsWidgets);
+    expect(service.response.isCompleted, isFalse);
+    service.response.complete(
+      service.requested!.copyWith(remoteState: ToolRemoteState.unavailable),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
   Future<void> pumpMiseGuiApp(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1600, 1200);
     tester.view.devicePixelRatio = 1;

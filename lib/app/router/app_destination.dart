@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 
 enum AppDestination {
-  toolchains(
-    label: '工具链',
-    description: '分类工具链',
-    path: '/toolchains',
-    icon: Icons.account_tree_outlined,
-    selectedIcon: Icons.account_tree_rounded,
-  ),
   dashboard(
     label: '总览',
     description: '环境总览',
     path: '/dashboard',
     icon: Icons.space_dashboard_rounded,
     selectedIcon: Icons.dashboard_customize_rounded,
+  ),
+  toolchains(
+    label: '工具链',
+    description: '分类工具链',
+    path: '/toolchains',
+    icon: Icons.account_tree_outlined,
+    selectedIcon: Icons.account_tree_rounded,
   ),
   tools(
     label: '工具',

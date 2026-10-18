@@ -365,6 +365,11 @@ class LiveConfigService implements ConfigService {
     required String nextContent,
   }) async {
     final file = File(document.path);
+    final exists = await file.exists();
+    if (exists != document.exists ||
+        (exists && await file.readAsString() != document.content)) {
+      throw StateError('配置已被其他程序修改，请刷新后重新编辑。');
+    }
     await file.parent.create(recursive: true);
     await file.writeAsString(_normalizeContent(nextContent));
   }

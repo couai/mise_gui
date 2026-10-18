@@ -187,7 +187,116 @@ class _InstalledLatestRemoteQueryService extends _FakeQueryService {
   }
 }
 
+class _MixedFlutterQueryService extends _FakeQueryService {
+  const _MixedFlutterQueryService();
+  @override
+  Future<List<MiseRemoteToolVersionRef>> fetchRemoteVersions(
+    String tool, {
+    String? workingDirectory,
+  }) async => const [
+    MiseRemoteToolVersionRef(
+      tool: 'flutter',
+      version: 'v1.12.13+hotfix.5',
+      rolling: false,
+    ),
+    MiseRemoteToolVersionRef(
+      tool: 'flutter',
+      version: '3.41.4-stable',
+      rolling: false,
+    ),
+    MiseRemoteToolVersionRef(
+      tool: 'flutter',
+      version: '3.47.7',
+      rolling: false,
+    ),
+    MiseRemoteToolVersionRef(
+      tool: 'flutter',
+      version: '3.48.0-beta.1',
+      rolling: false,
+    ),
+  ];
+}
+
+ToolRecord _flutterFixture(String version) => ToolRecord(
+  id: 'flutter',
+  name: 'Flutter',
+  category: 'SDK',
+  description: '',
+  activeVersion: version,
+  requestedVersion: version,
+  source: '全局',
+  strategy: '',
+  latestStableVersion: '待同步',
+  latestPreviewVersion: '待同步',
+  installedVersions: const [],
+  remoteVersions: const [],
+  projectImpacts: const [],
+  quickActions: const [],
+  commandPreview: '',
+  level: HealthLevel.info,
+);
+
 void main() {
+  test(
+    'explicit null clears a stale update while omitted value preserves it',
+    () {
+      final original = _flutterFixture(
+        '3.35.6',
+      ).copyWith(updateVersion: '3.35.7');
+      expect(original.copyWith().hasUpdate, isTrue);
+      expect(original.copyWith(updateVersion: null).hasUpdate, isFalse);
+    },
+  );
+
+  test(
+    'version order ignores v and vendor prefixes and ranks prereleases lower',
+    () {
+      expect(compareToolVersions('v1.12.13+hotfix.5', '3.44.8'), lessThan(0));
+      expect(compareToolVersions('v3.47.7', '3.47.7'), 0);
+      expect(compareToolVersions('temurin-17.0.20+1', '21.0.2'), lessThan(0));
+      expect(compareToolVersions('3.47.7-beta.1', '3.47.7'), lessThan(0));
+    },
+  );
+
+  test(
+    'mixed Flutter tags pick current stable rather than legacy stable suffix',
+    () async {
+      const service = LiveMiseCliService(
+        queryService: _MixedFlutterQueryService(),
+        processService: _FakeProcessService(
+          ShellEnvironmentLoadResult(source: ShellEnvironmentSource.shell),
+        ),
+      );
+      final detail = await service.hydrateToolRemoteState(
+        _flutterFixture('3.44.8'),
+      );
+      expect(detail.latestStableVersion, '3.47.7');
+      expect(detail.updateVersion, '3.47.7');
+      expect(
+        detail.remoteVersions.any((v) => v.version.contains('beta')),
+        isFalse,
+      );
+    },
+  );
+
+  test(
+    'latest stable does not become an older installable version when already current',
+    () async {
+      const service = LiveMiseCliService(
+        queryService: _InstalledLatestRemoteQueryService(),
+        processService: _FakeProcessService(
+          ShellEnvironmentLoadResult(source: ShellEnvironmentSource.shell),
+        ),
+      );
+      final detail = await service.hydrateToolRemoteState(
+        _flutterFixture('3.35.6'),
+      );
+      expect(detail.latestStableVersion, '3.35.6');
+      expect(detail.updateVersion, isNull);
+      expect(detail.remoteVersions, isNotEmpty);
+    },
+  );
+
   test('compares segmented tool versions numerically', () {
     expect(
       compareToolVersions('temurin-21.0.10+7.0.LTS', '21.0.2'),

@@ -5,6 +5,31 @@ import 'package:mise_gui/models/app_models.dart';
 import 'package:mise_gui/services/config_service.dart';
 
 void main() {
+  test(
+    'saving a stale editor document preserves external configuration edits',
+    () async {
+      final root = await Directory.systemTemp.createTemp(
+        'mise-config-conflict-',
+      );
+      addTearDown(() => root.delete(recursive: true));
+      final file = File('${root.path}/config.toml');
+      await file.writeAsString('[tools]\nnode = "24.21.0"\n');
+      final service = LiveConfigService(globalConfigPath: file.path);
+      final original = (await service.fetchWorkspace(
+        includeProjectConfig: false,
+      )).documents.first;
+      await file.writeAsString('[tools]\nnode = "22.20.0"\n');
+      await expectLater(
+        service.saveDocument(
+          document: original,
+          nextContent: '[tools]\nnode = "20.0.0"\n',
+        ),
+        throwsStateError,
+      );
+      expect(await file.readAsString(), contains('22.20.0'));
+    },
+  );
+
   test('runtime settings display TOML strings without quotes', () async {
     final tempDirectory = await Directory.systemTemp.createTemp(
       'mise-config-service-',
