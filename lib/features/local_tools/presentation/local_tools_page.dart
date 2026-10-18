@@ -133,6 +133,16 @@ class _LocalToolsPageState extends ConsumerState<LocalToolsPage> {
       title: '开发工具',
       description: '本地工具工作台 · 识别、分类、查看详情与快速打开',
       actions: [
+        OutlinedButton.icon(
+          onPressed: () => context.go(
+            Uri(
+              path: '/maintenance',
+              queryParameters: {if (selectedId != null) 'tool': selectedId!},
+            ).toString(),
+          ),
+          icon: const Icon(Icons.build_outlined),
+          label: const Text('安装与维护'),
+        ),
         FilledButton.icon(
           onPressed: snapshot.hasValue && !snapshot.isLoading
               ? importTool

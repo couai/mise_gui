@@ -36,6 +36,13 @@ enum AppDestination {
     icon: Icons.workspaces_outline,
     selectedIcon: Icons.workspaces_rounded,
   ),
+  maintenance(
+    label: '工具维护',
+    description: '安装、更新与定向清理',
+    path: '/maintenance',
+    icon: Icons.build_outlined,
+    selectedIcon: Icons.build_rounded,
+  ),
   tasks(
     label: '任务中心',
     description: '步骤、输出与验证',

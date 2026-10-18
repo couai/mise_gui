@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mise_gui/features/maintenance/presentation/maintenance_page.dart';
 import 'package:mise_gui/features/tasks/presentation/tasks_page.dart';
 import 'package:mise_gui/features/settings/presentation/manager_settings_page.dart';
 import 'package:mise_gui/features/storage/presentation/storage_page.dart';
@@ -80,6 +81,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppDestination.projects.path,
                 builder: (context, state) => const ProjectsPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppDestination.maintenance.path,
+                builder: (context, state) => MaintenancePage(
+                  initialTool: state.uri.queryParameters['tool'],
+                ),
               ),
             ],
           ),

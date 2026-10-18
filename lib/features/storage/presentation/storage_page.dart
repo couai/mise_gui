@@ -64,6 +64,11 @@ class _StoragePageState extends ConsumerState<StoragePage> {
       title: '目录与缓存',
       description: '真实占用、目录归属、软链接与分类规范',
       actions: [
+        OutlinedButton.icon(
+          onPressed: () => context.go('/maintenance?tool=npm'),
+          icon: const Icon(Icons.cleaning_services_outlined),
+          label: const Text('缓存维护'),
+        ),
         if (scanning)
           OutlinedButton.icon(
             onPressed: () =>

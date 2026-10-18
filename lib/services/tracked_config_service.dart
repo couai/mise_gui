@@ -42,11 +42,11 @@ class TrackedConfigService implements ConfigService {
     required String nextContent,
   }) async {
     if (center.managerBusy('mise')) throw StateError('已有 mise 任务执行中，请稍后保存配置');
-    final task = center.start('保存 mise 配置 · ${document.title}', 'mise', [
-      '检查文件状态',
-      '写入配置',
-      '回读验证',
-    ]);
+    final task = center.startMutation(
+      '保存 mise 配置 · ${document.title}',
+      'mise',
+      ['检查文件状态', '写入配置', '回读验证'],
+    );
     task.step(0, TaskStepStatus.running);
     try {
       final file = File(document.path);

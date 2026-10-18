@@ -24,7 +24,7 @@ class TrackedMiseActionService implements MiseActionService {
         .convert(script)
         .where((s) => s.trim().isNotEmpty && !s.trim().startsWith('#'))
         .toList();
-    final task = center.start(_title(script), 'mise', [
+    final task = center.startMutation(_title(script), 'mise', [
       '检查操作计划',
       ...lines,
       '验证安装与版本选择',

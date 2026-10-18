@@ -48,3 +48,7 @@ bash scripts/build_local_macos.sh
 `test/directory_storage_test.dart` 覆盖空间去重、归属、规范、相对/父目录/失效/循环链接、稀疏文件的实际占用、原生命令超时及取消；`test/storage_page_test.dart` 验证筛选、快速打开失败、工具跳转、停止/刷新、导航缓存和窄窗口。测试只在隔离目录修改权限和创建数据。
 
 设置 `DEVWORKBENCH_RENDER_STORAGE=1` 并沿用设计预览的字体环境变量，运行页面测试可只读扫描本机后生成 `docs/design/storage.png`。macOS 是本阶段验证平台。
+
+## 定向缓存维护
+
+目录扫描保持只读。页面“缓存维护”进入独立的 [原生维护流程](maintenance.md)，仅开放 npm、pip、uv 和 Go 编译缓存的分类范围；目录行的类型与归属本身不赋予清理许可。

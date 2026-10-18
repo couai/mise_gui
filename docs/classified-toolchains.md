@@ -59,4 +59,4 @@ Rust：设置已有的 RUSTUP_HOME/CARGO_HOME；安装采用 rustup，选择采�
 - 保留上游测试并运行 flutter analyze、flutter test、macOS 构建。
 - 在隔离 mise 配置和临时目录验证实际注册/切换，不为测试修改用户默认版本。
 
-Android SDK、Xcode 等本地工具的识别、详情和快速打开见 [DevWorkbench 工具工作台](dev-workbench.md)。它们不参与运行时安装适配；目录与缓存的只读体积统计及路径检查见 [目录与缓存](storage.md)；缓存清理、跨工具安装/卸载和更新通知仍未实现。
+Android SDK、Xcode 等本地工具的识别、详情和快速打开见 [DevWorkbench 工具工作台](dev-workbench.md)。它们不参与运行时安装适配；目录与缓存的只读体积统计及路径检查见 [目录与缓存](storage.md)；Homebrew / Android 的原生安装、更新、卸载和 npm/pip/uv/Go 定向缓存维护见 [工具维护](maintenance.md)。本分类运行时模块继续保护已有 SDK，不提供通用目录删除；GUI / mise 本体更新入口继续移除。

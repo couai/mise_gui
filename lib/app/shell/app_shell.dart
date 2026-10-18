@@ -36,6 +36,7 @@ class AppShell extends ConsumerWidget {
         destination != AppDestination.dashboard &&
         destination != AppDestination.storage &&
         destination != AppDestination.tasks &&
+        destination != AppDestination.maintenance &&
         destination != AppDestination.managers;
     final showMissing = isMissingMise && needsMise;
 

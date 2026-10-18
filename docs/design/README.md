@@ -2,6 +2,12 @@
 
 这些图片由实际 Flutter 页面和应用外壳渲染，使用本机版本配置的测试快照；它们不是运行中的 GUI 截屏。真实应用通过本地识别服务和 mise 查询版本、目录，不读取测试快照。
 
+## 工具维护
+
+![工具维护](maintenance.png)
+
+由实际 Flutter 页面渲染，使用隔离的安装记录测试场景，展示原生包的预览操作与受保护的 mise 条目。设置 `DEVWORKBENCH_RENDER_MAINTENANCE=1`，结合下方中文及 Material Icons 字体变量，运行 `flutter test test/maintenance_page_test.dart` 可重现。
+
 ## 任务中心与管理器设置
 
 ![任务中心](tasks.png)
@@ -63,6 +69,15 @@ flutter test test/tools_version_management_test.dart
 ```
 
 字体仅在本机加载，不复制到仓库。
+
+## 工具维护验证
+
+2026-10-18，DevWorkbench 1.5.0，macOS ARM64：
+
+- 171 项测试通过，包含 Homebrew 原生计划、依赖与固定版本保护、Android 组件及 AVD 引用保护、失效预览、安装结果回读、任务锁、缓存范围与执行前改链保护、原生超时、确认／取消和窄窗口。两个显式本机验收在普通测试中跳过。
+- 本机只读验收识别 76 个受支持的 Homebrew / Android 安装记录，生成单项卸载及四类定向缓存预览；没有执行本机安装、升级、卸载或现有缓存清理。原生 pip purge 仅对临时分类目录执行，验证缓存文件移除、旁边的配置保留。
+- 工具维护与已有任务中心共享步骤、输出和验证结果；其他写操作通过同一任务锁保护。运行时仍使用唯一的 mise 入口，Xcode、手动安装程序及混合数据目录保留原管理方式。
+- 静态分析、macOS Release 构建及严格签名校验通过；已更新 `/Applications/DevWorkbench.app` 到 1.5.0（build 15）并验证启动。8 个现有 SDK、默认选择、环境入口、mise 全局配置及工作台既有配置校验值保持不变。范围和原生参考见 [工具维护约定](../maintenance.md)。
 
 ## 任务中心与管理器设置验证
 

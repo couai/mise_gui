@@ -69,6 +69,14 @@ class TaskCenter extends StateNotifier<TaskCenterState> {
   bool managerBusy(String manager) =>
       state.tasks.any((t) => t.manager == manager && t.running);
   bool get busy => state.busy;
+  TaskHandle startMutation(String title, String manager, List<String> steps) {
+    const managers = {'mise', 'Homebrew', 'Android SDK', '缓存维护', '管理器设置'};
+    if (state.tasks.any((t) => t.running && managers.contains(t.manager))) {
+      throw StateError('已有写操作执行中，请在任务中心查看');
+    }
+    return start(title, manager, steps);
+  }
+
   TaskHandle start(String title, String manager, List<String> steps) {
     if (_disposed) throw StateError('任务中心已关闭');
     if (manager != '管理器设置' && manager != '目录扫描' && managerBusy('管理器设置')) {

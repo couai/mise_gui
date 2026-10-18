@@ -71,7 +71,7 @@ class _ManagerSettingsPageState extends ConsumerState<ManagerSettingsPage> {
     final center = ref.read(taskCenterProvider.notifier);
     if (center.busy || saving) return;
     setState(() => saving = true);
-    final task = center.start('保存管理器配置', '管理器设置', [
+    final task = center.startMutation('保存管理器配置', '管理器设置', [
       '验证配置路径',
       '原子保存配置',
       '应用后续操作设置',
