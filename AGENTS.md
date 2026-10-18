@@ -2,6 +2,7 @@
 
 - 使用项目 mise.toml 固定的 Flutter；Dart 随 SDK 配套提供。
 - 修改统一总览、工具识别/档案、导入或快速打开时，先读 [工具工作台约定](docs/dev-workbench.md)；总览与工具页共用 localToolsProvider，目录类型和关联策略集中在 LocalToolProfiles。
+- 修改目录扫描、空间汇总、软链接或路径规范检查时，先读 [目录与缓存约定](docs/storage.md)；测量只读，分类标签不作为清理许可。
 - 分类目录、安装/切换策略、首期边界和验证要求见 [设计方案](docs/classified-toolchains.md)。修改工具链操作、配置路径或界面时先读该文档。
 - 目录策略集中在 ToolchainLayout；页面预览和实际执行共用 ClassifiedToolchainService。运行时状态由 mise CLI 查询，其他工具使用本地程序或安装元数据。
 - 版本管理只保留一个导航入口，扩展时沿用工具版本卡片和统一预览／执行流程；已安装视图与远端查询分开。

@@ -682,6 +682,13 @@ class _ToolDetailState extends ConsumerState<_ToolDetail> {
           ),
           _fact('管理方式', t.manager),
           _fact('来源', t.source),
+          TextButton.icon(
+            onPressed: () => context.go(
+              Uri(path: '/storage', queryParameters: {'tool': t.id}).toString(),
+            ),
+            icon: const Icon(Icons.storage_outlined, size: 17),
+            label: const Text('查看目录占用与链接'),
+          ),
           if (t.imported)
             TextButton.icon(
               onPressed: opening ? null : forget,

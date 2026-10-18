@@ -32,7 +32,8 @@ class AppShell extends ConsumerWidget {
 
     final needsMise =
         destination != AppDestination.localTools &&
-        destination != AppDestination.dashboard;
+        destination != AppDestination.dashboard &&
+        destination != AppDestination.storage;
     final showMissing = isMissingMise && needsMise;
 
     return LayoutBuilder(

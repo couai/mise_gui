@@ -2,6 +2,12 @@
 
 这些图片由实际 Flutter 页面和应用外壳渲染，使用本机版本配置的测试快照；它们不是运行中的 GUI 截屏。真实应用通过本地识别服务和 mise 查询版本、目录，不读取测试快照。
 
+## 目录与缓存
+
+![目录与缓存](storage.png)
+
+由真实 Flutter 页面渲染，本机只读测量结果注入视图；预览按 Maven 归属筛选，顶部仍是全部登记路径的汇总。使用下方字体环境变量并设置 `DEVWORKBENCH_RENDER_STORAGE=1`，运行 `flutter test test/storage_page_test.dart` 可重现。
+
 ## 统一总览与工具档案
 
 ![统一总览](environment-overview.png)
@@ -49,6 +55,15 @@ flutter test test/tools_version_management_test.dart
 ```
 
 字体仅在本机加载，不复制到仓库。
+
+## 目录与缓存验证
+
+2026-10-18，DevWorkbench 1.3.0，macOS ARM64：
+
+- 129 项测试、静态分析、macOS Release 构建和严格签名校验通过。新增 22 项验证覆盖原生磁盘测量、稀疏文件、相对/父目录/失效/循环链接、父子与别名去重、归属与分类规范、超时/取消、筛选和快速打开、导航缓存及窄窗口。
+- 实际扫描约 20 秒：224 个登记路径、182 个实际测量目标、37 个含软链接路径；汇总约 76.4 GiB，声明为缓存的已测范围约 18.3 GiB。口径以 [目录与缓存约定](../storage.md) 为准，数值随本地数据变化。
+- 18 个分类外 IDE 配置、缓存和日志路径列为待核对；npm/Node.js、pip/Python 的配套安装路径通过规范检查。扫描未迁移目录或修复链接。
+- 更新 `/Applications/DevWorkbench.app` 至 1.3.0（build 13）并验证启动。SDK 版本、环境入口、mise 全局配置、项目扫描目录和导入清单保持原样。
 
 ## 统一总览与工具档案验证
 

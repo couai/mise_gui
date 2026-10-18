@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mise_gui/features/storage/presentation/storage_page.dart';
 import 'package:mise_gui/features/local_tools/presentation/local_tools_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -60,6 +61,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   initialTool: state.uri.queryParameters['tool'],
                   initialTab: state.uri.queryParameters['tab'],
                 ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppDestination.storage.path,
+                builder: (context, state) =>
+                    StoragePage(initialTool: state.uri.queryParameters['tool']),
               ),
             ],
           ),

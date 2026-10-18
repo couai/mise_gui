@@ -22,6 +22,13 @@ enum AppDestination {
     icon: Icons.handyman_outlined,
     selectedIcon: Icons.handyman_rounded,
   ),
+  storage(
+    label: '目录与缓存',
+    description: '空间与路径检查',
+    path: '/storage',
+    icon: Icons.storage_outlined,
+    selectedIcon: Icons.storage_rounded,
+  ),
   projects(
     label: '项目',
     description: '项目覆盖',
