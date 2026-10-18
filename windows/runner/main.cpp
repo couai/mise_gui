@@ -89,7 +89,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project);
   const Win32Window::Size size = ResolveInitialWindowSize();
   const Win32Window::Point origin = ResolveInitialWindowOrigin(size);
-  if (!window.Create(L"Mise GUI", origin, size)) {
+  if (!window.Create(L"DevWorkbench", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);
