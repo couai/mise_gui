@@ -40,7 +40,7 @@ mise exec -- flutter pub get
 mise exec -- flutter run -d macos
 ```
 
-验证使用 `flutter analyze`、`flutter test`、`dart run tool/check_environment.dart`、`dart run tool/check_local_tools.dart`。本机 macOS 构建采用 ad-hoc 签名；公开分发前另行配置签名和公证。
+验证使用 `flutter analyze`、`flutter test`、`dart run tool/check_environment.dart`、`dart run tool/check_local_tools.dart`。macOS 1.7.0 下载与安装说明见 [发布说明](docs/releases/v1.7.0.md)；此包使用 ad-hoc 本地签名，没有 Apple Developer ID 签名或公证。
 
 本地 Release 构建使用 `bash scripts/build_local_macos.sh`，构建后刷新内嵌框架及应用的临时签名并进行校验。
 
