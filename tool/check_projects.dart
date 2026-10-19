@@ -23,13 +23,26 @@ Future<void> main(List<String> args) async {
   ToolchainLayout.current = layout;
   const query = CliMiseQueryService(process);
   if (args.length == 2 && args.first == '--scan') {
-    final projects = await const LiveProjectScanService(
+    final scan = await const LiveProjectScanService(
       queryService: query,
-    ).fetchProjects([ScanDirectoryRecord(path: args[1])]);
+    ).scan([ScanDirectoryRecord(path: args[1])]);
+    final projects = scan.projects;
     for (final project in projects) {
       stdout.writeln('${project.name}\t${project.environment}');
     }
     stdout.writeln('${projects.length} projects; read-only scan');
+    stdout.writeln('scanComplete=${scan.complete}');
+    for (final root in scan.roots) {
+      stdout.writeln(
+        '${root.label}: ${root.path} (${root.visitedDirectories} directories)',
+      );
+      for (final issue in root.issues) {
+        stdout.writeln('  $issue');
+      }
+    }
+    for (final warning in scan.warnings) {
+      stdout.writeln(warning);
+    }
     return;
   }
   final local = await SystemLocalToolInventory(

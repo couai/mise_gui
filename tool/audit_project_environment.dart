@@ -110,11 +110,13 @@ Future<void> main() async {
     final limited = await LiveProjectScanService(
       queryService: query,
       maxProjectsPerRoot: 1,
-    ).fetchProjects([ScanDirectoryRecord(path: root.path)]);
-    stdout.writeln(
-      'OBSERVE scan limit: ${limited.length}/3 returned, '
-      'record levels=${limited.map((p) => p.level.name).join(',')}; '
-      'current List<ProjectRecord> has no truncated/failed-root summary.',
+    ).scan([ScanDirectoryRecord(path: root.path)]);
+    check('bounded scan reports incomplete', false, limited.complete);
+    check('bounded scan preserves one project', 1, limited.projects.length);
+    check(
+      'project limit reason is available',
+      true,
+      limited.roots.single.issues.any((reason) => reason.contains('项目上限')),
     );
   } finally {
     ToolchainLayout.current = original;

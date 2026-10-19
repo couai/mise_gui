@@ -32,9 +32,9 @@ class DashboardRepository {
           commandPreview: '',
         );
       }),
-      projectsRepository.loadProjects().catchError((Object _) {
+      projectsRepository.loadCoverageSnapshot().catchError((Object _) {
         projectsAvailable = false;
-        return <ProjectRecord>[];
+        return const ProjectCoverageSnapshot(scanDirectories: [], projects: []);
       }),
       _loadOperatingSystemInfo(),
       _loadMiseVersionInfo(),
@@ -42,7 +42,8 @@ class DashboardRepository {
     ]);
 
     final toolSummary = results[0] as DashboardToolSummary;
-    final projects = results[1] as List<ProjectRecord>;
+    final coverage = results[1] as ProjectCoverageSnapshot;
+    final projects = coverage.projects;
     final operatingSystemInfo = results[2] as _OperatingSystemInfo;
     final miseVersionInfo = results[3] as _MiseVersionInfo;
     final recentHistory = results[4] as List<HistoryEntry>;
@@ -87,21 +88,25 @@ class DashboardRepository {
           label: '项目覆盖',
           value: !projectsAvailable
               ? '暂不可用'
+              : !coverage.scanComplete
+              ? '部分扫描'
               : projects.isEmpty
-              ? '未配置'
+              ? '未发现项目'
               : overrideCount > 0
               ? '$overrideProjectCount 个项目'
               : '无覆盖',
           caption: !projectsAvailable
               ? '项目扫描暂不可用，请稍后刷新。'
+              : !coverage.scanComplete
+              ? '已发现 ${projects.length} 个项目；扫描范围不完整，请在项目工作台核对。'
               : projects.isEmpty
-              ? '还没有配置要扫描的项目目录。'
+              ? '当前扫描范围内未发现项目声明文件。'
               : overrideCount > 0
               ? '已扫描 ${projects.length} 个项目，发现 $overrideCount 处覆盖，分布在 $overrideProjectCount 个项目里。'
               : declaredToolCount > 0
               ? '已扫描 ${projects.length} 个项目，没有发现覆盖全局版本的项目。'
               : '已扫描 ${projects.length} 个项目，暂未检测到项目级版本声明。',
-          level: !projectsAvailable
+          level: !projectsAvailable || !coverage.scanComplete
               ? HealthLevel.warning
               : overrideCount > 0
               ? HealthLevel.warning

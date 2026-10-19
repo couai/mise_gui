@@ -2,6 +2,12 @@
 
 这些图片由实际 Flutter 页面和应用外壳渲染，使用本机版本配置的测试快照；它们不是运行中的 GUI 截屏。真实应用通过本地识别服务和 mise 查询版本、目录，不读取测试快照。
 
+## 1.6.1 扫描完整性
+
+![项目扫描完整性](project-scan-incomplete.png)
+
+由实际 Flutter 页面与隔离夹具渲染，显示上限与读取失败原因；宽／窄窗口均有交互测试。设置 `DEVWORKBENCH_RENDER_PROJECTS=1` 及下方字体变量，运行 `test/project_environment_page_test.dart` 中名称含 `partial scan` 的测试可重现。修复内容与实际验收见 [1.6.1 稳定性验证](../stability-1.6.1.md)。
+
 ## 项目工作台
 
 ![项目工作台](project-workbench.png)

@@ -238,14 +238,18 @@ class _ManagerSettingsPageState extends ConsumerState<ManagerSettingsPage> {
                   ),
                   SizedBox(
                     width: width,
-                    child: card('Homebrew', '用于程序识别与本地版本检查。安装和更新操作将在后续阶段接入。', [
-                      field(1, 'brew 程序路径'),
-                      field(
-                        2,
-                        'Homebrew 安装前缀',
-                        helper: '用于目录归属判断；本地检查固定关闭自动更新与分析。',
-                      ),
-                    ]),
+                    child: card(
+                      'Homebrew',
+                      '用于工具识别、版本检查和原生包维护；安装、更新及卸载从工具维护页操作。',
+                      [
+                        field(1, 'brew 程序路径'),
+                        field(
+                          2,
+                          'Homebrew 安装前缀',
+                          helper: '用于目录归属判断；本地检查固定关闭自动更新与分析。',
+                        ),
+                      ],
+                    ),
                   ),
                   SizedBox(
                     width: width,

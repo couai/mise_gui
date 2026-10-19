@@ -3,15 +3,19 @@ import 'dart:collection';
 import 'dart:io';
 import 'package:mise_gui/services/toolchain_layout.dart';
 import 'package:mise_gui/services/project_profile_service.dart';
+import 'package:toml/toml.dart';
 
 import 'package:mise_gui/models/app_models.dart';
 import 'package:mise_gui/services/mise_process_service.dart';
 import 'package:mise_gui/services/mise_query_service.dart';
 
 abstract class ProjectScanService {
+  const ProjectScanService();
   Future<List<ProjectRecord>> fetchProjects(
     List<ScanDirectoryRecord> directories,
   );
+  Future<ProjectScanResult> scan(List<ScanDirectoryRecord> directories) async =>
+      ProjectScanResult(projects: await fetchProjects(directories));
 }
 
 class _DiscoveredProjectConfig {
@@ -26,18 +30,20 @@ class _DiscoveredProjectConfig {
   final List<String> paths;
 }
 
-class LiveProjectScanService implements ProjectScanService {
+class LiveProjectScanService extends ProjectScanService {
   const LiveProjectScanService({
     required MiseQueryService queryService,
     this.maxDepth = 3,
     this.maxDirectoriesPerRoot = 240,
     this.maxProjectsPerRoot = 80,
+    this.listDirectory,
   }) : _queryService = queryService;
 
   final MiseQueryService _queryService;
   final int maxDepth;
   final int maxDirectoriesPerRoot;
   final int maxProjectsPerRoot;
+  final Stream<FileSystemEntity> Function(Directory)? listDirectory;
 
   static const List<String> _workspaceConfigNames = <String>[
     'mise.toml',
@@ -76,120 +82,145 @@ class LiveProjectScanService implements ProjectScanService {
   @override
   Future<List<ProjectRecord>> fetchProjects(
     List<ScanDirectoryRecord> directories,
-  ) async {
+  ) async => (await scan(directories)).projects;
+
+  @override
+  Future<ProjectScanResult> scan(List<ScanDirectoryRecord> directories) async {
+    final roots = _collapseOverlappingRoots(
+      directories.where((d) => d.enabled).toList(),
+    );
+    if (roots.isEmpty) return const ProjectScanResult(projects: []);
+    final warnings = <String>[];
+    var globalAssignments = <String, String>{};
     try {
-      final activeDirectories = directories
-          .where((directory) => directory.enabled)
-          .toList(growable: false);
-      final collapsedDirectories = _collapseOverlappingRoots(activeDirectories);
-      if (collapsedDirectories.isEmpty) {
-        return const <ProjectRecord>[];
-      }
-
-      final globalConfigPath = _globalConfigPath();
-      var globalConfig = '';
-      try {
-        globalConfig = await _readFileIfExists(globalConfigPath) ?? '';
-      } catch (_) {
-        /* Still discover projects if the global file cannot be read. */
-      }
-      final projectsByPath = <String, ProjectRecord>{};
-
-      for (final directory in collapsedDirectories) {
-        final configs = await _discoverWorkspaceConfigs(directory.path);
-        for (final config in configs) {
-          ProjectRecord? project;
-          try {
-            project = await _buildProjectRecord(
-              config: config,
-              scanRootPath: directory.path,
-              globalConfig: globalConfig,
-            );
-          } catch (_) {
-            project = null;
+      globalAssignments = _parseToolAssignments(
+        await _readFileIfExists(_globalConfigPath()) ?? '',
+      );
+    } catch (_) {
+      warnings.add('全局 mise 配置无法读取或解析，版本覆盖结果尚未完整核对。');
+    }
+    final reports = <ProjectScanRootReport>[];
+    final projects = <String, ProjectRecord>{};
+    for (final root in roots) {
+      final discovered = await _discoverWorkspaceConfigs(root.path);
+      final issues = [...discovered.report.issues];
+      var count = 0;
+      for (final config in discovered.configs) {
+        try {
+          final project = await _buildProjectRecord(
+            config: config,
+            scanRootPath: root.path,
+            globalAssignments: globalAssignments,
+          );
+          if (project != null) {
+            projects[project.path] = project;
+            count++;
+          } else {
+            issues.add('无法读取项目：${config.directoryPath}');
           }
-          if (project == null) {
-            continue;
-          }
-          projectsByPath.putIfAbsent(project.path, () => project!);
+        } catch (_) {
+          issues.add('无法读取项目：${config.directoryPath}');
         }
       }
-
-      final projects = projectsByPath.values.toList()
-        ..sort((a, b) {
-          final overrideCompare = b.overrideCount.compareTo(a.overrideCount);
-          if (overrideCompare != 0) {
-            return overrideCompare;
-          }
-          return a.path.toLowerCase().compareTo(b.path.toLowerCase());
-        });
-      return projects;
-    } catch (_) {
-      return const <ProjectRecord>[];
+      reports.add(
+        ProjectScanRootReport(
+          path: root.path,
+          visitedDirectories: discovered.report.visitedDirectories,
+          projectCount: count,
+          issues: List.unmodifiable(issues),
+        ),
+      );
     }
+    final ordered = projects.values.toList()
+      ..sort((a, b) {
+        final byOverride = b.overrideCount.compareTo(a.overrideCount);
+        return byOverride != 0
+            ? byOverride
+            : a.path.toLowerCase().compareTo(b.path.toLowerCase());
+      });
+    return ProjectScanResult(
+      projects: List.unmodifiable(ordered),
+      roots: List.unmodifiable(reports),
+      warnings: warnings,
+    );
   }
 
-  Future<List<_DiscoveredProjectConfig>> _discoverWorkspaceConfigs(
-    String rootPath,
-  ) async {
-    final rootDirectory = Directory(rootPath);
-    if (!await rootDirectory.exists()) {
-      return const <_DiscoveredProjectConfig>[];
-    }
-
-    final queue = Queue<({Directory directory, int depth})>()
-      ..add((directory: rootDirectory, depth: 0));
+  Future<
+    ({List<_DiscoveredProjectConfig> configs, ProjectScanRootReport report})
+  >
+  _discoverWorkspaceConfigs(String rootPath) async {
+    final issues = <String>{};
+    final discovered = <_DiscoveredProjectConfig>[];
     final visited = <String>{};
-    final discovered = <String, _DiscoveredProjectConfig>{};
-
+    final queue = Queue<({Directory directory, int depth})>();
+    try {
+      final root = Directory(rootPath);
+      if (!await root.exists()) {
+        issues.add('目录不存在或不可访问：$rootPath');
+      } else {
+        queue.add((directory: root, depth: 0));
+      }
+    } catch (_) {
+      issues.add('目录无法访问：$rootPath');
+    }
     while (queue.isNotEmpty && visited.length < maxDirectoriesPerRoot) {
       final item = queue.removeFirst();
-      final path = item.directory.path;
-      if (!visited.add(path)) {
-        continue;
+      if (!visited.add(item.directory.path)) continue;
+      try {
+        final config = await _discoverProjectConfig(item.directory.path);
+        if (config != null) discovered.add(config);
+      } catch (_) {
+        issues.add('项目文件无法检查：${item.directory.path}');
       }
-
-      final config = await _discoverProjectConfig(path);
-      if (config != null) {
-        discovered[path] = config;
-        if (discovered.length >= maxProjectsPerRoot) {
-          break;
-        }
-      }
-
-      if (item.depth >= maxDepth) {
-        continue;
-      }
-
       final children = <Directory>[];
-      await for (final entity
-          in item.directory.list(followLinks: false).handleError((_) {})) {
-        if (entity is! Directory) {
-          continue;
+      try {
+        final stream =
+            listDirectory?.call(item.directory) ??
+            item.directory.list(followLinks: false);
+        await for (final entity in stream) {
+          if (entity is! Directory) continue;
+          final name = _basename(entity.path);
+          if (name.startsWith('.') || _ignoredDirectories.contains(name)) {
+            continue;
+          }
+          children.add(entity);
+          // Bound wide-directory enumeration as well as traversal. A sentinel
+          // child is enough to prove the requested scan cannot be exhaustive.
+          if (children.length > maxDirectoriesPerRoot) {
+            issues.add('达到目录上限 $maxDirectoriesPerRoot，部分路径未扫描。');
+            break;
+          }
         }
-        final basename = _basename(entity.path);
-        if (basename.startsWith('.') ||
-            _ignoredDirectories.contains(basename)) {
-          continue;
-        }
-        children.add(entity);
+      } catch (_) {
+        issues.add('目录读取失败：${item.directory.path}');
       }
-
       children.sort(
         (a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()),
       );
-      for (final child in children) {
-        queue.add((directory: child, depth: item.depth + 1));
+      if (item.depth >= maxDepth) {
+        if (children.isNotEmpty) issues.add('达到最大深度 $maxDepth，部分子目录未扫描。');
+      } else {
+        for (final child in children) {
+          queue.add((directory: child, depth: item.depth + 1));
+        }
+      }
+      if (discovered.length >= maxProjectsPerRoot && queue.isNotEmpty) {
+        issues.add('达到项目上限 $maxProjectsPerRoot，部分路径未扫描。');
+        break;
       }
     }
-
-    final ordered = discovered.values.toList()
-      ..sort(
-        (a, b) => a.directoryPath.toLowerCase().compareTo(
-          b.directoryPath.toLowerCase(),
-        ),
-      );
-    return ordered;
+    if (queue.isNotEmpty && visited.length >= maxDirectoriesPerRoot) {
+      issues.add('达到目录上限 $maxDirectoriesPerRoot，部分路径未扫描。');
+    }
+    return (
+      configs: discovered,
+      report: ProjectScanRootReport(
+        path: rootPath,
+        visitedDirectories: visited.length,
+        projectCount: discovered.length,
+        issues: issues.toList(),
+      ),
+    );
   }
 
   List<ScanDirectoryRecord> _collapseOverlappingRoots(
@@ -264,7 +295,7 @@ class LiveProjectScanService implements ProjectScanService {
   Future<ProjectRecord?> _buildProjectRecord({
     required _DiscoveredProjectConfig config,
     required String scanRootPath,
-    required String globalConfig,
+    required Map<String, String> globalAssignments,
   }) async {
     final workspacePath = config.directoryPath;
     final projectContents = <String, String>{};
@@ -283,7 +314,6 @@ class LiveProjectScanService implements ProjectScanService {
 
     final projectAssignments = _parseProjectAssignments(projectContents);
     final projectSources = _parseProjectAssignmentSources(projectContents);
-    final globalAssignments = _parseToolAssignments(globalConfig);
     final commandPreview = [
       'mise current',
       'mise ls --json',
@@ -449,84 +479,24 @@ class LiveProjectScanService implements ProjectScanService {
     }
   }
 
-  String? _extractSection(String? content, String sectionName) {
-    if (content == null || content.trim().isEmpty) {
-      return null;
-    }
-
-    final lines = content.split('\n');
-    final buffer = <String>[];
-    final header = '[$sectionName]';
-    var collecting = false;
-
-    for (final line in lines) {
-      final trimmed = line.trim();
-      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-        if (collecting) {
-          break;
-        }
-        if (trimmed == header) {
-          collecting = true;
-          buffer.add(line);
-          continue;
-        }
-      }
-
-      if (collecting) {
-        buffer.add(line);
-      }
-    }
-
-    if (buffer.isEmpty) {
-      return null;
-    }
-    return buffer.join('\n').trimRight();
-  }
-
   Map<String, String> _parseToolAssignments(String content) {
-    final values = <String, String>{
-      ..._parseAssignments(_extractSection(content, 'tools')),
+    if (content.trim().isEmpty) return {};
+    final values = ProjectProfileService.miseVersions(content);
+    return {
+      for (final entry in values.entries)
+        if (entry.value is String) entry.key: (entry.value as String).trim(),
     };
-    for (final match in RegExp(
-      r'^\[tools\.([a-zA-Z0-9_-]+)\]\s*$',
-      multiLine: true,
-    ).allMatches(content)) {
-      final tool = match.group(1)!;
-      final version = _parseAssignments(
-        _extractSection(content, 'tools.$tool'),
-      )['version'];
-      if (version != null) values[tool] = version;
-    }
-    return values;
-  }
-
-  Map<String, String> _parseAssignments(String? section) {
-    if (section == null || section.trim().isEmpty) {
-      return const <String, String>{};
-    }
-
-    final result = <String, String>{};
-    for (final line in section.split('\n')) {
-      final trimmed = line.trim();
-      if (trimmed.isEmpty ||
-          trimmed.startsWith('#') ||
-          trimmed.startsWith('[') ||
-          !trimmed.contains('=')) {
-        continue;
-      }
-
-      final index = trimmed.indexOf('=');
-      final key = trimmed.substring(0, index).trim().replaceAll('"', '');
-      final value = trimmed.substring(index + 1).trim().replaceAll('"', '');
-      result[key] = value;
-    }
-    return result;
   }
 
   Map<String, String> _parseProjectAssignments(Map<String, String> contents) {
     final assignments = <String, String>{};
     for (final entry in contents.entries) {
-      final parsed = _parseAssignmentsForPath(entry.key, entry.value);
+      Map<String, String> parsed;
+      try {
+        parsed = _parseAssignmentsForPath(entry.key, entry.value);
+      } catch (_) {
+        continue;
+      }
       for (final item in parsed.entries) {
         assignments.putIfAbsent(item.key, () => item.value);
       }
@@ -539,7 +509,12 @@ class LiveProjectScanService implements ProjectScanService {
   ) {
     final sources = <String, String>{};
     for (final entry in contents.entries) {
-      final parsed = _parseAssignmentsForPath(entry.key, entry.value);
+      Map<String, String> parsed;
+      try {
+        parsed = _parseAssignmentsForPath(entry.key, entry.value);
+      } catch (_) {
+        continue;
+      }
       for (final item in parsed.entries) {
         sources.putIfAbsent(item.key, () => entry.key);
       }
@@ -556,10 +531,9 @@ class LiveProjectScanService implements ProjectScanService {
       return _parseToolVersions(content);
     }
     if (fileName == 'rust-toolchain.toml') {
-      final channel = _parseAssignments(
-        _extractSection(content, 'toolchain'),
-      )['channel'];
-      return channel == null ? const {} : {'rust': channel};
+      final table = TomlDocument.parse(content).toMap()['toolchain'];
+      final channel = table is Map ? table['channel'] : null;
+      return channel is String ? {'rust': channel.trim()} : {};
     }
     final tool = _singleToolVersionFiles[fileName];
     if (tool != null) {
@@ -621,7 +595,8 @@ class LiveProjectScanService implements ProjectScanService {
     if (sourcePath == workspaceConfigPath) {
       return '项目';
     }
-    if (sourcePath.contains('/.config/mise/')) {
+    if (sourcePath == _globalConfigPath() ||
+        sourcePath.contains('/.config/mise/')) {
       return '全局';
     }
     return '解析结果';
@@ -705,7 +680,7 @@ class LiveProjectScanService implements ProjectScanService {
   }
 }
 
-class MockProjectScanService implements ProjectScanService {
+class MockProjectScanService extends ProjectScanService {
   const MockProjectScanService();
 
   @override

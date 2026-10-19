@@ -376,14 +376,60 @@ class ScanDirectoryRecord {
   }
 }
 
+class ProjectScanRootReport {
+  const ProjectScanRootReport({
+    required this.path,
+    this.visitedDirectories = 0,
+    this.projectCount = 0,
+    this.issues = const [],
+  });
+  final String path;
+  final int visitedDirectories, projectCount;
+  final List<String> issues;
+  bool get complete => issues.isEmpty;
+  bool covers(String candidate) {
+    final base = path.replaceAll('\\', '/').replaceAll(RegExp(r'/+$'), '');
+    final value = candidate
+        .replaceAll('\\', '/')
+        .replaceAll(RegExp(r'/+$'), '');
+    return value == base || value.startsWith('$base/');
+  }
+
+  String get label => complete
+      ? '扫描完成'
+      : visitedDirectories == 0
+      ? '读取失败'
+      : '部分扫描';
+}
+
+class ProjectScanResult {
+  const ProjectScanResult({
+    required this.projects,
+    this.roots = const [],
+    this.warnings = const [],
+  });
+  final List<ProjectRecord> projects;
+  final List<ProjectScanRootReport> roots;
+  final List<String> warnings;
+  bool get complete => warnings.isEmpty && roots.every((r) => r.complete);
+}
+
 class ProjectCoverageSnapshot {
   const ProjectCoverageSnapshot({
     required this.scanDirectories,
     required this.projects,
+    this.scanRoots = const [],
+    this.scanWarnings = const [],
   });
 
   final List<ScanDirectoryRecord> scanDirectories;
   final List<ProjectRecord> projects;
+  final List<ProjectScanRootReport> scanRoots;
+  final List<String> scanWarnings;
+  bool get scanComplete =>
+      scanWarnings.isEmpty && scanRoots.every((r) => r.complete);
+  ProjectScanRootReport? scanReportFor(String path) =>
+      scanRoots.where((r) => r.covers(path)).firstOrNull;
 
   int get enabledDirectoryCount =>
       scanDirectories.where((directory) => directory.enabled).length;

@@ -45,6 +45,23 @@ class ProjectProfileService {
   ];
   static const maxBytes = 256 * 1024;
 
+  /// Shared TOML semantics for coverage and project profiles; no evaluation.
+  static Map<String, dynamic> miseVersions(String content) {
+    final table = TomlDocument.parse(content).toMap()['tools'];
+    if (table == null) return {};
+    if (table is! Map) throw const FormatException('tools 必须是 TOML 表');
+    return {
+      for (final entry in table.entries)
+        switch (entry.key) {
+          'nodejs' => 'node',
+          'golang' => 'go',
+          _ => entry.key.toString(),
+        }: entry.value is Map
+            ? entry.value['version']
+            : entry.value,
+    };
+  }
+
   static Future<String?> readMetadata(String root, String name) async {
     final file = File('$root/$name');
     final type = await FileSystemEntity.type(file.path, followLinks: false);
@@ -319,23 +336,15 @@ class ProjectProfileService {
           'mise.local.toml',
           '.mise.local.toml',
         ].contains(name)) {
-          final table = TomlDocument.parse(text).toMap()['tools'];
-          if (table is Map) {
-            for (final entry in table.entries) {
-              final tool = switch (entry.key) {
-                'nodejs' => 'node',
-                'golang' => 'go',
-                _ => entry.key.toString(),
-              };
-              final value = entry.value is Map
-                  ? entry.value['version']
-                  : entry.value;
-              if (value is String) {
-                require(tool, value, name);
-              } else {
-                tools.add(tool);
-                issues.add('$name · $tool 使用复杂版本声明，请在 mise 版本管理中核对。');
-              }
+          final table = miseVersions(text);
+          for (final entry in table.entries) {
+            final tool = entry.key;
+            final value = entry.value;
+            if (value is String) {
+              require(tool, value, name);
+            } else {
+              tools.add(tool);
+              issues.add('$name · $tool 使用复杂版本声明，请在 mise 版本管理中核对。');
             }
           }
         } else if (name == '.tool-versions') {

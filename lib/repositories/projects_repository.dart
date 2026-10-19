@@ -37,10 +37,12 @@ class ProjectsRepository {
 
   Future<ProjectCoverageSnapshot> loadCoverageSnapshot() async {
     final directories = await _scanDirectoryService.fetchDirectories();
-    final projects = await _projectScanService.fetchProjects(directories);
+    final result = await _projectScanService.scan(directories);
     return ProjectCoverageSnapshot(
       scanDirectories: directories,
-      projects: projects,
+      projects: result.projects,
+      scanRoots: result.roots,
+      scanWarnings: result.warnings,
     );
   }
 }

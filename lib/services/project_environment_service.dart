@@ -96,6 +96,10 @@ class ProjectEnvironmentService {
       if (profile.providedTools.contains(id)) {
         state = ProjectToolState.projectProvided;
         detail = '检测到项目 Wrapper；未运行或下载，版本与构建可用性待项目验证。';
+      } else if (tool?.status == LocalToolStatus.unavailable ||
+          tool?.status == LocalToolStatus.attention) {
+        state = ProjectToolState.review;
+        detail = '本机工具探测失败或需检查；保留已知版本，请到工具档案核对。';
       } else if (effective == null) {
         state =
             installed.isEmpty &&
@@ -153,11 +157,15 @@ class ProjectEnvironmentService {
   /// Returns null for syntax whose semantics are not implemented. Never guess.
   static bool? satisfies(String actual, ProjectRequirement requirement) {
     String normalize(String v) {
-      v = v.replaceFirst(
-        RegExp(r'^(oracle-|temurin-|zulu-|openjdk-|v|go)'),
-        '',
-      );
-      if (v.startsWith('1.8')) v = v.replaceFirst('1.8', '8');
+      v = v.trim();
+      if (requirement.tool == 'java') {
+        v = v.replaceFirst(RegExp(r'^(oracle-|temurin-|zulu-|openjdk-)'), '');
+        v = v.replaceFirst(RegExp(r'^1\.8(?=\.|$)'), '8');
+      }
+      if (requirement.tool == 'go') {
+        v = v.replaceFirst(RegExp(r'^go(?=\d)'), '');
+      }
+      v = v.replaceFirst(RegExp(r'^v(?=\d)'), '');
       return v;
     }
 

@@ -110,6 +110,7 @@ void main() {
     WidgetTester tester, {
     double width = 1500,
     String? route,
+    ProjectCoverageSnapshot? coverage,
   }) async {
     tester.view.physicalSize = Size(width, 1350);
     tester.view.devicePixelRatio = 1;
@@ -241,40 +242,42 @@ void main() {
           ),
         ),
         projectCoverageProvider.overrideWith(
-          (ref) async => ProjectCoverageSnapshot(
-            scanDirectories: const [
-              ScanDirectoryRecord(path: '/Users/example/WorkSpace'),
-            ],
-            projects: [
-              project(
-                'shop-web',
-                'Node.js · Vue · TypeScript',
-                render ? '/Users/example/WorkSpace/shop-web' : path,
+          (ref) async =>
+              coverage ??
+              ProjectCoverageSnapshot(
+                scanDirectories: const [
+                  ScanDirectoryRecord(path: '/Users/example/WorkSpace'),
+                ],
+                projects: [
+                  project(
+                    'shop-web',
+                    'Node.js · Vue · TypeScript',
+                    render ? '/Users/example/WorkSpace/shop-web' : path,
+                  ),
+                  project(
+                    'order-api',
+                    'Java / Maven · Spring Boot',
+                    '/Users/example/WorkSpace/order-api',
+                  ),
+                  project(
+                    'analysis-service',
+                    'Python · FastAPI',
+                    '/Users/example/WorkSpace/analysis-service',
+                  ),
+                  project(
+                    'mobile-client',
+                    'Flutter',
+                    '/Users/example/WorkSpace/mobile-client',
+                  ),
+                ],
               ),
-              project(
-                'order-api',
-                'Java / Maven · Spring Boot',
-                '/Users/example/WorkSpace/order-api',
-              ),
-              project(
-                'analysis-service',
-                'Python · FastAPI',
-                '/Users/example/WorkSpace/analysis-service',
-              ),
-              project(
-                'mobile-client',
-                'Flutter',
-                '/Users/example/WorkSpace/mobile-client',
-              ),
-            ],
-          ),
         ),
         appVersionInfoProvider.overrideWith(
           (ref) async => const AppVersionInfo(
             appName: 'DevWorkbench',
             packageName: 'com.couai.miseGui',
-            version: '1.6.0',
-            buildNumber: '16',
+            version: '1.6.1',
+            buildNumber: '17',
           ),
         ),
       ],
@@ -363,6 +366,60 @@ void main() {
     expect(find.text('实际生效：24.21.0'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  for (final width in [1500.0, 740.0]) {
+    testWidgets(
+      'partial scan shows root failures and bounded discovery at width $width',
+      (tester) async {
+        const root = '/Users/example/WorkSpace';
+        await app(
+          tester,
+          width: width,
+          route: '/projects',
+          coverage: ProjectCoverageSnapshot(
+            scanDirectories: const [ScanDirectoryRecord(path: root)],
+            projects: [project('order-api', 'Java / Maven', '$root/order-api')],
+            scanRoots: const [
+              ProjectScanRootReport(
+                path: root,
+                visitedDirectories: 240,
+                projectCount: 1,
+                issues: [
+                  '达到目录上限 240，部分路径未扫描。',
+                  '目录读取失败：/Users/example/WorkSpace/denied',
+                ],
+              ),
+            ],
+          ),
+        );
+        expect(find.text('项目扫描不完整'), findsOneWidget);
+        expect(find.text('项目环境 · 已发现 1'), findsOneWidget);
+        expect(find.text('扫描中'), findsNothing);
+        await tester.tap(find.text('查看扫描范围和原因'));
+        await tester.pumpAndSettle();
+        expect(
+          find.textContaining('目录读取失败：/Users/example/WorkSpace/denied'),
+          findsWidgets,
+        );
+        expect(tester.takeException(), isNull);
+        if (render && width == 1500) {
+          await tester.runAsync(() async {
+            final image =
+                await (boundary.currentContext!.findRenderObject()!
+                        as RenderRepaintBoundary)
+                    .toImage(pixelRatio: 1.5);
+            final bytes = await image.toByteData(
+              format: ui.ImageByteFormat.png,
+            );
+            await File(
+              'docs/design/project-scan-incomplete.png',
+            ).writeAsBytes(bytes!.buffer.asUint8List());
+            image.dispose();
+          });
+        }
+      },
+    );
+  }
 
   testWidgets('render real project pages with isolated metadata fixtures', (
     tester,

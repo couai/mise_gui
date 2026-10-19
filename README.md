@@ -30,6 +30,7 @@
 - “工具维护”接入 Homebrew / Android 的原生单项安装、更新与卸载，提供 npm、pip、uv、Go 编译缓存的定向清理；范围和保护规则见 [维护约定](docs/maintenance.md)。
 - “项目工作台”识别 Java、Node / Vue / TS、Python、Go、Rust、Flutter 等项目，核对版本要求与实际环境，固定已安装的项目 SDK，并快速打开 IDE、终端和接口集合目录；见 [项目约定](docs/projects.md)。
 - 五阶段完成范围、实际验收、已复现问题及后续优先级见 [功能验收报告](docs/feature-audit-2026-10-19.md)。
+- 1.6.1 修复版本比较、TOML 覆盖判断和探测失败状态，并补充扫描完整性；见 [稳定性验证](docs/stability-1.6.1.md)。
 - 应用配置与历史放在 `$HOME/Developer/toolchains/mise-gui/`。全局配置、缓存和运行时沿用已有 mise 环境。
 - [工具工作台设计与边界](docs/dev-workbench.md) · [分类安装策略](docs/classified-toolchains.md) · [实际 Flutter 页面预览](docs/design/README.md)
 - [代码与上游 Issues 检查记录](docs/bug-audit-2026-10-18.md)

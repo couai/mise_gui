@@ -103,19 +103,22 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage> {
 
     try {
       await _reloadData();
+      if (!mounted) return;
+      final complete =
+          ref.read(projectCoverageProvider).valueOrNull?.scanComplete ?? false;
       await ref
           .read(historyServiceProvider)
           .appendEntry(
             HistoryEntry(
               command: 'mise ls --json',
               timestamp: _formatNow(),
-              detail: '用户手动刷新了项目覆盖扫描结果。',
-              level: HealthLevel.info,
+              detail: complete ? '用户手动刷新了项目工作台扫描结果。' : '项目扫描不完整，请核对扫描范围和原因。',
+              level: complete ? HealthLevel.info : HealthLevel.warning,
               status: HistoryStatus.success,
               exitCode: 0,
             ),
           );
-      _showFeedback('扫描结果已刷新。');
+      _showFeedback(complete ? '扫描结果已刷新。' : '已刷新部分扫描结果，请查看扫描范围和原因。');
     } catch (error) {
       _showFeedback(_formatRefreshError(error));
     } finally {
@@ -440,7 +443,14 @@ class _ProjectCoverageLayout extends StatelessWidget {
     return Column(
       children: [
         _ProjectsAutoRefresh(paths: watchPaths),
-        _ProjectWorkbenchPanel(projects: snapshot.projects),
+        if (!snapshot.scanComplete) ...[
+          _ScanCompletenessNotice(snapshot: snapshot),
+          const SizedBox(height: 20),
+        ],
+        _ProjectWorkbenchPanel(
+          projects: snapshot.projects,
+          complete: snapshot.scanComplete,
+        ),
         const SizedBox(height: 20),
         LayoutBuilder(
           builder: (context, constraints) {
@@ -450,6 +460,7 @@ class _ProjectCoverageLayout extends StatelessWidget {
                 children: [
                   _ScanDirectoriesPanel(
                     directories: snapshot.scanDirectories,
+                    scanRoots: snapshot.scanRoots,
                     projects: snapshot.projects,
                     onAddDirectory: onAddDirectory,
                     onRemoveDirectory: onRemoveDirectory,
@@ -458,6 +469,7 @@ class _ProjectCoverageLayout extends StatelessWidget {
                   const SizedBox(height: 18),
                   _OverridesPanel(
                     directories: snapshot.scanDirectories,
+                    complete: snapshot.scanComplete,
                     projectCount: snapshot.projects.length,
                     overrideRows: overrides,
                   ),
@@ -472,6 +484,7 @@ class _ProjectCoverageLayout extends StatelessWidget {
                   width: 350,
                   child: _ScanDirectoriesPanel(
                     directories: snapshot.scanDirectories,
+                    scanRoots: snapshot.scanRoots,
                     projects: snapshot.projects,
                     onAddDirectory: onAddDirectory,
                     onRemoveDirectory: onRemoveDirectory,
@@ -482,6 +495,7 @@ class _ProjectCoverageLayout extends StatelessWidget {
                 Expanded(
                   child: _OverridesPanel(
                     directories: snapshot.scanDirectories,
+                    complete: snapshot.scanComplete,
                     projectCount: snapshot.projects.length,
                     overrideRows: overrides,
                   ),
@@ -495,9 +509,44 @@ class _ProjectCoverageLayout extends StatelessWidget {
   }
 }
 
+class _ScanCompletenessNotice extends StatelessWidget {
+  const _ScanCompletenessNotice({required this.snapshot});
+  final ProjectCoverageSnapshot snapshot;
+  @override
+  Widget build(BuildContext context) => AppPanel(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const StatusBadge(label: '项目扫描不完整', level: HealthLevel.warning),
+        const SizedBox(height: 12),
+        Text('当前仅显示已发现的 ${snapshot.projects.length} 个项目，不能据此判断其余目录没有项目或版本覆盖。'),
+        const SizedBox(height: 8),
+        const Text('可添加更具体的代码目录，核对目录访问权限后重新扫描。'),
+        Material(
+          type: MaterialType.transparency,
+          child: ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: const Text('查看扫描范围和原因'),
+            children: [
+              for (final warning in snapshot.scanWarnings)
+                ListTile(title: Text(warning)),
+              for (final root in snapshot.scanRoots.where((r) => !r.complete))
+                ListTile(
+                  title: Text(root.path),
+                  subtitle: Text(root.issues.join('\n')),
+                ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 class _ProjectWorkbenchPanel extends StatefulWidget {
-  const _ProjectWorkbenchPanel({required this.projects});
+  const _ProjectWorkbenchPanel({required this.projects, this.complete = true});
   final List<ProjectRecord> projects;
+  final bool complete;
   @override
   State<_ProjectWorkbenchPanel> createState() => _ProjectWorkbenchPanelState();
 }
@@ -518,7 +567,7 @@ class _ProjectWorkbenchPanelState extends State<_ProjectWorkbenchPanel> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '项目环境 · ${widget.projects.length}',
+            '项目环境 · ${widget.complete ? '' : '已发现 '}${widget.projects.length}',
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
@@ -535,9 +584,13 @@ class _ProjectWorkbenchPanelState extends State<_ProjectWorkbenchPanel> {
           ),
           const SizedBox(height: 14),
           if (projects.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('暂无匹配项目；添加代码所在的扫描目录后重新扫描。'),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                widget.complete
+                    ? '暂无匹配项目；添加代码所在的扫描目录后重新扫描。'
+                    : '本次扫描尚未完整，当前范围内暂无匹配项目。',
+              ),
             ),
           LayoutBuilder(
             builder: (context, constraints) => Wrap(
@@ -620,8 +673,10 @@ class _ScanDirectoriesPanel extends StatelessWidget {
     required this.onAddDirectory,
     required this.onRemoveDirectory,
     required this.onToggleDirectory,
+    this.scanRoots = const [],
   });
 
+  final List<ProjectScanRootReport> scanRoots;
   final List<ScanDirectoryRecord> directories;
   final List<ProjectRecord> projects;
   final VoidCallback onAddDirectory;
@@ -672,6 +727,9 @@ class _ScanDirectoriesPanel extends StatelessWidget {
                       return _ScanDirectoryCard(
                         key: ValueKey(directory.path),
                         directory: directory,
+                        scanReport: scanRoots
+                            .where((r) => r.covers(directory.path))
+                            .firstOrNull,
                         projects: projectsForDirectory,
                         projectCount: projectCount,
                         overrideProjectCount: overrideProjectCount,
@@ -899,8 +957,10 @@ class _ScanDirectoryCard extends StatelessWidget {
     required this.overrideProjectCount,
     required this.onRemove,
     required this.onToggle,
+    this.scanReport,
   });
 
+  final ProjectScanRootReport? scanReport;
   final ScanDirectoryRecord directory;
   final List<ProjectRecord> projects;
   final int projectCount;
@@ -913,6 +973,7 @@ class _ScanDirectoryCard extends StatelessWidget {
     final colors = AppTheme.colorsOf(context);
     final summary = _DirectoryScanSummary(
       enabled: directory.enabled,
+      report: scanReport,
       projectCount: projectCount,
       overrideProjectCount: overrideProjectCount,
     );
@@ -955,7 +1016,10 @@ class _ScanDirectoryCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              _DirectoryStatusLabel(enabled: directory.enabled),
+              _DirectoryStatusLabel(
+                enabled: directory.enabled,
+                report: scanReport,
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -1145,11 +1209,17 @@ class _DirectoryScanSummary {
     required bool enabled,
     required int projectCount,
     required int overrideProjectCount,
+    ProjectScanRootReport? report,
   }) {
     if (!enabled) {
       return const _DirectoryScanSummary._paused();
     }
 
+    if (report?.complete == false) {
+      return _DirectoryScanSummary._warning(
+        '${report!.label}，已发现 $projectCount 个项目。${report.issues.first}',
+      );
+    }
     if (projectCount == 0) {
       return const _DirectoryScanSummary._empty();
     }
@@ -1169,7 +1239,7 @@ class _DirectoryScanSummary {
       level = HealthLevel.info;
 
   const _DirectoryScanSummary._empty()
-    : message = '未发现 mise 项目。',
+    : message = '当前扫描范围内未发现项目声明文件。',
       icon = Icons.search_off_rounded,
       level = HealthLevel.info;
 
@@ -1187,14 +1257,19 @@ class _DirectoryScanSummary {
 }
 
 class _DirectoryStatusLabel extends StatelessWidget {
-  const _DirectoryStatusLabel({required this.enabled});
+  const _DirectoryStatusLabel({required this.enabled, this.report});
 
   final bool enabled;
+  final ProjectScanRootReport? report;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppTheme.colorsOf(context);
-    final color = enabled ? colors.accent : colors.textMuted;
+    final color = !enabled
+        ? colors.textMuted
+        : report?.complete == false
+        ? colors.warning
+        : colors.accent;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -1206,7 +1281,7 @@ class _DirectoryStatusLabel extends StatelessWidget {
         ),
         const SizedBox(width: 7),
         Text(
-          enabled ? '扫描中' : '已暂停',
+          enabled ? report?.label ?? '已启用' : '已暂停',
           style: TextStyle(
             color: color,
             fontSize: 12,
@@ -1289,11 +1364,13 @@ class _OverridesPanel extends StatelessWidget {
     required this.directories,
     required this.projectCount,
     required this.overrideRows,
+    this.complete = true,
   });
 
   final List<ScanDirectoryRecord> directories;
   final int projectCount;
   final List<_OverrideRowData> overrideRows;
+  final bool complete;
 
   @override
   Widget build(BuildContext context) {
@@ -1329,10 +1406,12 @@ class _OverridesPanel extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           if (directories.isEmpty)
-            const _OverridesEmptyState(message: '暂无项目覆盖全局版本')
+            _OverridesEmptyState(
+              message: complete ? '本次扫描未发现项目覆盖全局版本' : '已扫描范围内未发现版本覆盖；扫描尚未完整。',
+            )
           else if (overrideRows.isEmpty)
             _OverridesEmptyState(
-              message: projectCount > 0 ? '暂无项目覆盖全局版本' : '暂无项目覆盖全局版本',
+              message: complete ? '本次扫描未发现项目覆盖全局版本' : '已扫描范围内未发现版本覆盖；扫描尚未完整。',
             )
           else
             SingleChildScrollView(
