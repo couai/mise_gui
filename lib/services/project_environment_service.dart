@@ -4,11 +4,17 @@ import 'package:mise_gui/models/local_tool.dart';
 import 'package:mise_gui/models/project_environment.dart';
 import 'package:mise_gui/services/mise_query_service.dart';
 import 'package:mise_gui/services/project_profile_service.dart';
+import 'package:mise_gui/services/project_runtime_inspector.dart';
 
 class ProjectEnvironmentService {
-  const ProjectEnvironmentService(this.profiles, this.query);
+  const ProjectEnvironmentService(
+    this.profiles,
+    this.query, {
+    this.runtimeInspector,
+  });
   final ProjectProfileService profiles;
   final MiseQueryService query;
+  final ProjectRuntimeInspector? runtimeInspector;
 
   Future<ProjectEnvironment> inspect(
     String path,
@@ -39,12 +45,48 @@ class ProjectEnvironmentService {
         /* A missing Dart version stays unverified. */
       }
     }
+    final evidence = await runtimeInspector?.inspect(
+      profile,
+      scoped,
+      query,
+      queryAvailable: issue == null,
+    );
+    final moduleScopes = <String, List<MiseInstalledToolVersionRef>>{};
+    for (final module in profile.modules.where((m) => m.path != profile.path)) {
+      var overridden = false;
+      var directory = Directory(module.path);
+      while (directory.path != profile.path &&
+          directory.path.startsWith('${profile.path}/')) {
+        for (final name in ProjectProfileService.versionNames) {
+          if (await File('${directory.path}/$name').exists()) {
+            overridden = true;
+            break;
+          }
+        }
+        if (overridden) break;
+        directory = directory.parent;
+      }
+      if (overridden) {
+        try {
+          moduleScopes[module.path] =
+              (await query.fetchInstalledTools(
+                workingDirectory: module.path,
+              ))['java'] ??
+              [];
+        } catch (_) {
+          moduleScopes[module.path] = [];
+        }
+      }
+    }
     return compare(
       profile,
       local,
       scoped,
       dartVersion: dart,
       queryIssue: issue,
+      observations: evidence?.tools ?? const {},
+      pythonEnvironments: evidence?.pythonEnvironments ?? const [],
+      moduleScopes: moduleScopes,
     );
   }
 
@@ -54,6 +96,9 @@ class ProjectEnvironmentService {
     Map<String, List<MiseInstalledToolVersionRef>> scoped, {
     String? dartVersion,
     String? queryIssue,
+    Map<String, ProjectToolObservation> observations = const {},
+    List<ProjectPythonEnvironment> pythonEnvironments = const [],
+    Map<String, List<MiseInstalledToolVersionRef>> moduleScopes = const {},
   }) {
     final checks = <ProjectToolCheck>[];
     const runtimes = {
@@ -74,7 +119,7 @@ class ProjectEnvironmentService {
       'gradle',
       'android-sdk',
     };
-    for (final id in profile.toolIds) {
+    for (final id in {...profile.toolIds, ...observations.keys}) {
       final tool = local.tool(id);
       final rows = scoped[id] ?? const <MiseInstalledToolVersionRef>[];
       final active = rows.where((v) => v.active && v.installed).firstOrNull;
@@ -83,7 +128,10 @@ class ProjectEnvironmentService {
         ...?tool?.versions.map((v) => v.version),
         if (tool?.installed == true && tool?.version != null) tool!.version!,
       }.toList();
-      final effective = id == 'dart'
+      final observation = observations[id];
+      final effective = observation != null
+          ? observation.version
+          : id == 'dart'
           ? dartVersion
           : runtimes.contains(id)
           ? active?.version
@@ -93,11 +141,20 @@ class ProjectEnvironmentService {
       final reqs = profile.requirements.where((r) => r.tool == id).toList();
       ProjectToolState state;
       var detail = '';
-      if (profile.providedTools.contains(id)) {
+      if (observation?.issue != null) {
+        state = ProjectToolState.review;
+        detail = observation!.issue!;
+      } else if (profile.providedTools.contains(id)) {
         state = ProjectToolState.projectProvided;
-        detail = '检测到项目 Wrapper；未运行或下载，版本与构建可用性待项目验证。';
-      } else if (tool?.status == LocalToolStatus.unavailable ||
-          tool?.status == LocalToolStatus.attention) {
+        final wrapper = profile.modules
+            .where((m) => m.manager == 'Gradle')
+            .firstOrNull
+            ?.wrapperVersion;
+        detail =
+            '检测到项目 Wrapper${id == 'gradle' && wrapper != null ? '，声明 Gradle $wrapper' : ''}；未运行或下载，构建可用性待项目验证。';
+      } else if (observation == null &&
+          (tool?.status == LocalToolStatus.unavailable ||
+              tool?.status == LocalToolStatus.attention)) {
         state = ProjectToolState.review;
         detail = '本机工具探测失败或需检查；保留已知版本，请到工具档案核对。';
       } else if (effective == null) {
@@ -114,7 +171,7 @@ class ProjectEnvironmentService {
         }
       } else if (reqs.isEmpty) {
         state = ProjectToolState.available;
-        detail = '项目未声明版本约束。';
+        detail = observation != null ? '已按项目解析结果核对；项目未声明版本约束。' : '项目未声明版本约束。';
       } else {
         final results = reqs.map((r) => satisfies(effective, r)).toList();
         state = results.contains(false)
@@ -122,7 +179,7 @@ class ProjectEnvironmentService {
             : results.contains(null)
             ? ProjectToolState.review
             : ProjectToolState.satisfied;
-        if (!runtimes.contains(id)) {
+        if (!runtimes.contains(id) && observation == null) {
           // Native probes reflect the desktop environment, not Corepack/venv.
           state = ProjectToolState.review;
           detail = '显示本机工具版本；项目专用 Corepack、虚拟环境或 Wrapper 需另行核对。';
@@ -130,27 +187,78 @@ class ProjectEnvironmentService {
           detail = '别名、动态值或复杂约束未自动判定。';
         }
       }
+      if (observation?.version != null &&
+          observation?.issue == null &&
+          (id == 'npm' || id == 'pnpm')) {
+        detail = '项目目录下离线执行 --version；自动下载和自动切换已禁用。';
+      }
       checks.add(
         ProjectToolCheck(
           tool: id,
           requirements: reqs,
           installed: installed,
           effective: effective,
-          source: id == 'dart' && dartVersion != null
-              ? '项目 Flutter SDK 配套 Dart'
-              : runtimes.contains(id)
-              ? active?.source?.path
-              : '本机工具探测',
+          source:
+              observation?.source ??
+              (id == 'dart' && dartVersion != null
+                  ? '项目 Flutter SDK 配套 Dart'
+                  : runtimes.contains(id)
+                  ? active?.source?.path
+                  : '本机工具探测'),
           state: state,
           detail: detail,
         ),
       );
     }
+    final modules = profile.modules.map((module) {
+      final rows = moduleScopes[module.path] ?? scoped['java'] ?? [];
+      final active = rows.where((v) => v.active && v.installed).firstOrNull;
+      var state = ProjectToolState.available;
+      var detail = '未声明编译级别；此模块可能只用于聚合，未执行构建。';
+      if (active == null || module.warnings.isNotEmpty) {
+        state = ProjectToolState.review;
+        detail = active == null ? '未确认此模块的启动 JDK；保留静态声明。' : '模块信息不完整，请核对下列提示。';
+      } else if (module.requirements.isNotEmpty) {
+        final targets = module.requirements.where(
+          (r) => r.kind == ProjectRequirementKind.minimum,
+        );
+        final compiler = module.requirements
+            .where((r) => r.kind != ProjectRequirementKind.minimum)
+            .firstOrNull;
+        final results = targets
+            .map((r) => satisfies(compiler?.value ?? active.version, r))
+            .toList();
+        final toolchain = module.requirements.any(
+          (r) => r.kind != ProjectRequirementKind.minimum,
+        );
+        state = results.contains(false)
+            ? ProjectToolState.mismatch
+            : results.contains(null) || toolchain
+            ? ProjectToolState.review
+            : ProjectToolState.satisfied;
+        detail = state == ProjectToolState.mismatch && toolchain
+            ? '声明的 Gradle 编译工具链低于模块编译级别。'
+            : toolchain
+            ? '编译工具链与启动 JVM 分开；静态声明已识别，Gradle 实际选择的编译 JDK 需由构建确认。'
+            : state == ProjectToolState.mismatch
+            ? '启动 JDK 低于模块编译级别。'
+            : '启动 JDK 可满足已识别编译级别；插件、profiles 与完整构建未验证。';
+      }
+      return ProjectModuleCheck(
+        module,
+        javaVersion: active?.version,
+        javaSource: active?.source?.path,
+        state: state,
+        detail: detail,
+      );
+    }).toList();
     return ProjectEnvironment(
       profile,
       checks,
       DateTime.now(),
       queryIssue: queryIssue,
+      pythonEnvironments: pythonEnvironments,
+      modules: modules,
     );
   }
 

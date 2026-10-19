@@ -8,6 +8,7 @@ import 'package:mise_gui/services/mise_query_service.dart';
 import 'package:mise_gui/services/project_environment_service.dart';
 import 'package:mise_gui/services/project_profile_service.dart';
 import 'package:mise_gui/services/project_scan_service.dart';
+import 'package:mise_gui/services/project_runtime_inspector.dart';
 import 'package:mise_gui/services/toolchain_layout.dart';
 
 /// Read-only acceptance: existing tools and projects, without task/settings writes.
@@ -50,7 +51,14 @@ Future<void> main(List<String> args) async {
     process: const SystemLocalToolProcess(),
     loadVersions: ClassifiedToolchainService(process, layout).inventory,
   ).scan();
-  const service = ProjectEnvironmentService(ProjectProfileService(), query);
+  final service = ProjectEnvironmentService(
+    const ProjectProfileService(),
+    query,
+    runtimeInspector: ProjectRuntimeInspector(
+      const SystemLocalToolProcess(),
+      layout,
+    ),
+  );
   for (final path in args.isEmpty ? [Directory.current.path] : args) {
     final result = await service.inspect(path, local);
     stdout.writeln(
@@ -59,6 +67,16 @@ Future<void> main(List<String> args) async {
     for (final check in result.checks) {
       stdout.writeln(
         '${check.tool}\t${check.state.label}\t${check.effective ?? 'unverified'}',
+      );
+    }
+    for (final venv in result.pythonEnvironments) {
+      stdout.writeln(
+        'venv\t${venv.path}\t${venv.version ?? 'unverified'}\tselected=${venv.selected}\t${venv.issue ?? venv.selection}',
+      );
+    }
+    for (final module in result.modules) {
+      stdout.writeln(
+        'module\t${module.module.manager}\t${module.module.name}\t${module.state.label}\tJVM=${module.javaVersion ?? 'unverified'}',
       );
     }
     stdout.writeln(

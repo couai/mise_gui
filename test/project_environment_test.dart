@@ -461,9 +461,12 @@ void main() {
         present: {'gradlew'},
       );
       expect(p.toolIds, containsAll(['java', 'gradle', 'android-sdk']));
-      expect(p.requirements.single.value, '17');
+      expect(p.modules.single.requirements.single.value, '17');
       expect(p.providedTools, ['gradle']);
-      expect(p.warnings, contains(contains('仅识别静态声明')));
+      expect(
+        p.modules.single.requirements.single.source,
+        contains('java.toolchain'),
+      );
       expect(File('${temp.path}/unsafe').existsSync(), isFalse);
     },
   );

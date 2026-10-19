@@ -7,6 +7,8 @@ import 'package:mise_gui/services/project_profile_service.dart';
 import 'package:mise_gui/services/project_environment_service.dart';
 import 'package:mise_gui/services/project_version_service.dart';
 import 'package:mise_gui/services/project_launcher.dart';
+import 'package:mise_gui/services/project_runtime_inspector.dart';
+import 'package:mise_gui/features/settings/application/manager_settings_provider.dart';
 
 final projectProfileServiceProvider = Provider(
   (ref) => const ProjectProfileService(),
@@ -15,6 +17,18 @@ final projectEnvironmentServiceProvider = Provider(
   (ref) => ProjectEnvironmentService(
     ref.watch(projectProfileServiceProvider),
     ref.watch(projectMiseQueryServiceProvider),
+    runtimeInspector: ProjectRuntimeInspector(
+      ref.watch(localToolProcessProvider),
+      ref.watch(managerLayoutProvider),
+      trustedRoots: [
+        ref.watch(managerSettingsProvider).homebrewPrefix,
+        '/usr/bin',
+        '/bin',
+      ],
+      timeout: Duration(
+        seconds: ref.watch(managerSettingsProvider).probeTimeoutSeconds,
+      ),
+    ),
   ),
 );
 final projectEnvironmentProvider = FutureProvider.autoDispose

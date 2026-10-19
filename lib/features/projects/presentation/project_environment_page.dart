@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mise_gui/features/local_tools/application/local_tools_provider.dart';
 import 'package:mise_gui/features/projects/application/projects_provider.dart';
+import 'package:mise_gui/features/projects/presentation/project_runtime_details.dart';
 import 'package:mise_gui/features/tasks/application/task_provider.dart';
 import 'package:mise_gui/features/toolchains/application/toolchains_provider.dart';
 import 'package:mise_gui/models/app_models.dart';
@@ -268,7 +269,7 @@ class _ProjectEnvironmentPageState
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '检查时间：${environment.checkedAt.toLocal().toString().split('.').first} · 运行时按项目目录查询 mise；包管理器显示本机探测结果。',
+                      '检查时间：${environment.checkedAt.toLocal().toString().split('.').first} · 运行时按项目查询 mise；npm/pnpm 离线核对实际命令，虚拟环境与模块单独展示。',
                     ),
                     if (environment.queryIssue != null)
                       Padding(
@@ -317,6 +318,11 @@ class _ProjectEnvironmentPageState
                 ),
               ),
               const SizedBox(height: 20),
+              ProjectRuntimeDetails(
+                environment: environment,
+                onOpen: (path) =>
+                    run(() => ref.read(localToolOpenerProvider).open(path)),
+              ),
               AppPanel(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

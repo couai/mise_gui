@@ -26,6 +26,16 @@ Future<ProjectEnvironment> checkProjectEnvironment(
     for (final check in result.checks) {
       task.output('${check.tool}: ${check.state.label}\n');
     }
+    for (final venv in result.pythonEnvironments) {
+      task.output(
+        'Python 环境：${venv.path} · ${venv.selected ? '已选择' : '候选'} · ${venv.issue == null ? '已读取' : '待核对'}\n',
+      );
+    }
+    for (final module in result.modules) {
+      task.output(
+        '${module.module.manager} 模块 ${module.module.name}: ${module.state.label}\n',
+      );
+    }
     task.step(1, TaskStepStatus.succeeded);
     final passed =
         result.issueCount == 0 &&

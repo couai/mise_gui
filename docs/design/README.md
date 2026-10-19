@@ -2,6 +2,12 @@
 
 这些图片由实际 Flutter 页面和应用外壳渲染，使用本机版本配置的测试快照；它们不是运行中的 GUI 截屏。真实应用通过本地识别服务和 mise 查询版本、目录，不读取测试快照。
 
+## 1.7.0 项目诊断
+
+![虚拟环境与 Java 模块](project-diagnostics.png)
+
+实际 `ProjectRuntimeDetails` Flutter 组件，使用隔离快照展示已选择／失效候选虚拟环境、pip 安装记录、模块编译 JDK 与 mise JDK 的区别；不是用户项目的实时截图。1200／400 宽度均验证目录打开和换行。设置下方字体变量与 `DEVWORKBENCH_RENDER_PROJECTS=1`，运行 `test/project_runtime_details_test.dart` 重现。本机真实命令验收见 [1.7.0 诊断验证](../project-diagnostics-1.7.0.md)。
+
 ## 1.6.1 扫描完整性
 
 ![项目扫描完整性](project-scan-incomplete.png)

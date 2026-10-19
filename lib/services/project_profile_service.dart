@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:toml/toml.dart';
-import 'package:xml/xml.dart';
 import 'package:yaml/yaml.dart';
 import 'package:mise_gui/models/project_environment.dart';
 import 'package:mise_gui/services/toolchain_layout.dart';
+import 'package:mise_gui/services/project_java_metadata.dart';
 
 /// Reads a bounded allowlist of metadata. Never sources scripts or reads .env.
 class ProjectProfileService {
@@ -14,7 +14,10 @@ class ProjectProfileService {
     'pom.xml',
     'build.gradle',
     'build.gradle.kts',
+    'settings.gradle',
+    'settings.gradle.kts',
     'pyproject.toml',
+    'requirements.txt',
     'go.mod',
     'Cargo.toml',
     'pubspec.yaml',
@@ -110,6 +113,7 @@ class ProjectProfileService {
         warnings.add('$name 无法检查。');
       }
     }
+    await ProjectJavaMetadata.collect(root, contents, warnings);
     return parse(root, contents, present: present, warnings: warnings);
   }
 
@@ -124,6 +128,7 @@ class ProjectProfileService {
     final stacks = <String>{}, tools = <String>{}, provided = <String>{};
     final requirements = <ProjectRequirement>[];
     final scripts = <ProjectScript>[];
+    String? pythonVenv;
     void require(
       String tool,
       Object? value,
@@ -175,6 +180,8 @@ class ProjectProfileService {
           }
           var manager = 'npm';
           final pm = data['packageManager'];
+          final dev = data['devEngines'];
+          final devManager = dev is Map ? dev['packageManager'] : null;
           if (pm is String) {
             final match = RegExp(r'^(npm|pnpm|yarn)@([^+]+)').firstMatch(pm);
             if (match != null) {
@@ -188,6 +195,15 @@ class ProjectProfileService {
             } else {
               issues.add('packageManager 无法识别，请核对项目包管理器。');
             }
+          } else if (devManager is Map &&
+              ['npm', 'pnpm', 'yarn'].contains(devManager['name'])) {
+            manager = devManager['name'] as String;
+            require(
+              manager,
+              devManager['version'],
+              '$name · devEngines.packageManager',
+              ProjectRequirementKind.constraint,
+            );
           } else if (present.contains('pnpm-lock.yaml')) {
             manager = 'pnpm';
           } else if (present.contains('yarn.lock')) {
@@ -215,6 +231,9 @@ class ProjectProfileService {
               );
             }
           }
+        } else if (name == 'requirements.txt') {
+          stacks.add('Python');
+          tools.add('python');
         } else if (name == 'pyproject.toml') {
           stacks.add('Python');
           tools.add('python');
@@ -275,39 +294,21 @@ class ProjectProfileService {
         } else if (name == 'pom.xml') {
           stacks.add('Java / Maven');
           tools.addAll(['java', 'maven']);
-          if (text.contains('<!DOCTYPE')) throw const FormatException('DTD');
-          final xml = XmlDocument.parse(text);
-          final properties = xml.rootElement
-              .findElements('properties')
-              .firstOrNull;
-          for (final key in [
-            'maven.compiler.release',
-            'java.version',
-            'maven.compiler.target',
-          ]) {
-            final value = properties?.findElements(key).firstOrNull?.innerText;
-            if (value != null) {
-              require('java', value, '$name · $key');
-              break;
-            }
-          }
           if (text.contains('spring-boot')) stacks.add('Spring Boot');
           if (present.contains('mvnw')) provided.add('maven');
-        } else if (name == 'build.gradle' || name == 'build.gradle.kts') {
+        } else if ([
+          'build.gradle',
+          'build.gradle.kts',
+          'settings.gradle',
+          'settings.gradle.kts',
+        ].contains(name)) {
           stacks.add('Java / Gradle');
           tools.addAll(['java', 'gradle']);
-          final match = RegExp(
-            r'JavaLanguageVersion\.of\(\s*(\d+)\s*\)',
-          ).firstMatch(text);
-          if (match != null) {
-            require('java', match[1], '$name · java.toolchain');
-          }
           if (text.contains('com.android.')) {
             stacks.add('Android');
             tools.add('android-sdk');
           }
           if (present.contains('gradlew')) provided.add('gradle');
-          issues.add('$name 仅识别静态声明；插件、变量和完整构建环境需由项目构建验证。');
         } else if (name == 'go.mod') {
           stacks.add('Go');
           tools.add('go');
@@ -337,6 +338,12 @@ class ProjectProfileService {
           '.mise.local.toml',
         ].contains(name)) {
           final table = miseVersions(text);
+          final env = TomlDocument.parse(text).toMap()['env'];
+          final special = env is Map ? env['_'] : null;
+          final python = special is Map ? special['python'] : null;
+          final venv = python is Map ? python['venv'] : null;
+          if (venv is String) pythonVenv = venv;
+          if (venv is Map && venv['path'] is String) pythonVenv = venv['path'];
           for (final entry in table.entries) {
             final tool = entry.key;
             final value = entry.value;
@@ -386,6 +393,19 @@ class ProjectProfileService {
         issues.add('$name 解析失败；未将其声明判定为已满足。');
       }
     }
+    final modules = ProjectJavaMetadata.parse(root, files);
+    for (final module in modules.where((m) => m.warnings.isNotEmpty)) {
+      issues.add('${module.buildFile}：${module.warnings.join('；')}');
+    }
+    // Compilation levels and Gradle toolchains are checked per module. A module
+    // targeting Java 17 does not imply the build JVM must be exactly Java 17.
+    for (final module in modules.where((m) => m.path == root)) {
+      requirements.addAll(
+        module.requirements.where(
+          (r) => r.kind == ProjectRequirementKind.minimum,
+        ),
+      );
+    }
     return ProjectProfile(
       path: root,
       name: root.split('/').last,
@@ -396,6 +416,8 @@ class ProjectProfileService {
       providedTools: provided.toList(),
       scripts: scripts,
       warnings: issues,
+      modules: modules,
+      pythonVenvPath: pythonVenv,
       brunoPath: present.any((n) => n.startsWith('api/bruno/'))
           ? '$root/api/bruno'
           : null,
