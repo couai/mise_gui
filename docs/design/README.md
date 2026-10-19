@@ -2,6 +2,22 @@
 
 这些图片由实际 Flutter 页面和应用外壳渲染，使用本机版本配置的测试快照；它们不是运行中的 GUI 截屏。真实应用通过本地识别服务和 mise 查询版本、目录，不读取测试快照。
 
+## 项目工作台
+
+![项目工作台](project-workbench.png)
+
+![项目环境](project-environment.png)
+
+两图由真实 Flutter 页面渲染，使用隔离的混合技术栈项目与工具快照，不是用户项目的实际验收截图。设置 `DEVWORKBENCH_RENDER_PROJECTS=1`，结合下方中文和 Material Icons 字体变量，运行 `flutter test test/project_environment_page_test.dart` 可重现。
+
+2026-10-19，DevWorkbench 1.6.0，macOS ARM64：
+
+- 191 项测试通过，两个显式本机验收在普通测试中跳过；新增 20 项覆盖 manifest 项目发现、混合技术栈、元数据大小／软链接保护、解析警告、Oracle Java 与版本范围、项目作用域、Flutter 配套 Dart、未受信任查询、Wrapper、失效预览、隔离 mise 写入、确认／取消和窄窗口。
+- 静态分析、格式检查、macOS Release 构建和严格签名校验通过。只读检查仍识别 45/46 项工具；8 个既有 SDK 的分类目录与全局默认保持一致。环境入口、mise 全局配置、管理器设置、扫描目录和导入清单校验值保持一致。
+- 本机扫描源码父目录发现 DevWorkbench 的 Node.js／Flutter 项目。项目实际 Flutter 3.47.7、配套 Dart 3.13.5、Node.js 24.21.0 均识别成功；npm 11.19.0 作为本机探测结果保留待核对，没有把它当作已验证的项目专用包管理器。未运行项目脚本、安装依赖或改动用户项目版本。
+- 识别边界、版本比较与写入保护见 [项目工作台约定](../projects.md)。
+- 已更新 `/Applications/DevWorkbench.app` 到 1.6.0（build 16）并验证新进程启动；安装后主程序与 Dart 产物校验值均与签名构建一致。全局和源码 AGENTS.md 已同步，保留运行依赖、现有项目配置与模拟器。
+
 ## 工具维护
 
 ![工具维护](maintenance.png)

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
 import 'package:mise_gui/services/toolchain_layout.dart';
+import 'package:mise_gui/services/project_profile_service.dart';
 
 import 'package:mise_gui/models/app_models.dart';
 import 'package:mise_gui/services/mise_process_service.dart';
@@ -40,6 +41,7 @@ class LiveProjectScanService implements ProjectScanService {
 
   static const List<String> _workspaceConfigNames = <String>[
     'mise.toml',
+    '.mise.toml',
     '.mise.local.toml',
     'mise.local.toml',
   ];
@@ -66,6 +68,9 @@ class LiveProjectScanService implements ProjectScanService {
     'build',
     'dist',
     'node_modules',
+    'target',
+    'venv',
+    '.venv',
   };
 
   @override
@@ -82,7 +87,12 @@ class LiveProjectScanService implements ProjectScanService {
       }
 
       final globalConfigPath = _globalConfigPath();
-      final globalConfig = await _readFileIfExists(globalConfigPath) ?? '';
+      var globalConfig = '';
+      try {
+        globalConfig = await _readFileIfExists(globalConfigPath) ?? '';
+      } catch (_) {
+        /* Still discover projects if the global file cannot be read. */
+      }
       final projectsByPath = <String, ProjectRecord>{};
 
       for (final directory in collapsedDirectories) {
@@ -236,6 +246,10 @@ class LiveProjectScanService implements ProjectScanService {
       }
     }
 
+    for (final name in ProjectProfileService.manifestNames) {
+      final candidate = File('$directoryPath/$name');
+      if (await candidate.exists()) paths.add(candidate.path);
+    }
     if (paths.isEmpty) {
       return null;
     }
@@ -255,14 +269,17 @@ class LiveProjectScanService implements ProjectScanService {
     final workspacePath = config.directoryPath;
     final projectContents = <String, String>{};
     for (final path in config.paths) {
-      final content = await _readFileIfExists(path);
+      String? content;
+      try {
+        content = await _readFileIfExists(path);
+      } catch (_) {
+        /* Profile reports unreadable metadata. */
+      }
       if (content != null) {
         projectContents[path] = content;
       }
     }
-    if (projectContents.isEmpty) {
-      return null;
-    }
+    final profile = await const ProjectProfileService().inspect(workspacePath);
 
     final projectAssignments = _parseProjectAssignments(projectContents);
     final projectSources = _parseProjectAssignmentSources(projectContents);
@@ -276,9 +293,13 @@ class LiveProjectScanService implements ProjectScanService {
     var installedTools = <String, List<MiseInstalledToolVersionRef>>{};
     String? scanIssue;
     try {
-      installedTools = await _queryService.fetchInstalledTools(
-        workingDirectory: workspacePath,
-      );
+      if (config.paths.any(
+        (p) => !ProjectProfileService.manifestNames.contains(_basename(p)),
+      )) {
+        installedTools = await _queryService.fetchInstalledTools(
+          workingDirectory: workspacePath,
+        );
+      }
     } on MiseProcessException catch (error) {
       scanIssue = _describeScanIssue(error);
     } catch (_) {
@@ -329,7 +350,9 @@ class LiveProjectScanService implements ProjectScanService {
 
     bindings.sort((a, b) => a.name.compareTo(b.name));
 
-    final environment = _resolveEnvironment(projectAssignments.keys);
+    final environment = profile.stacks.isEmpty
+        ? _resolveEnvironment(projectAssignments.keys)
+        : profile.stacks.join(' · ');
     final declaredTools = bindings
         .where((binding) => binding.declaredInProject)
         .length;
@@ -352,15 +375,12 @@ class LiveProjectScanService implements ProjectScanService {
       lastScan: await _formatLastScan(config.paths),
       commandPreview: commandPreview,
       bindings: bindings,
-      level: scanIssue != null || overrides > 0
+      level: scanIssue != null || overrides > 0 || profile.warnings.isNotEmpty
           ? HealthLevel.warning
           : HealthLevel.healthy,
-      notes: _buildNotes(
-        declaredTools: declaredTools,
-        overrides: overrides,
-        projectOnlyTools: projectOnlyTools,
-        scanIssue: scanIssue,
-      ),
+      notes:
+          '${_buildNotes(declaredTools: declaredTools, overrides: overrides, projectOnlyTools: projectOnlyTools, scanIssue: scanIssue)} ${profile.warnings.join(' ')}'
+              .trim(),
     );
   }
 
@@ -400,7 +420,12 @@ class LiveProjectScanService implements ProjectScanService {
     if (!await file.exists()) {
       return null;
     }
-    return file.readAsString();
+    if (await FileSystemEntity.type(path, followLinks: false) !=
+        FileSystemEntityType.file) {
+      return null;
+    }
+    final root = await file.parent.resolveSymbolicLinks();
+    return ProjectProfileService.readMetadata(root, _basename(path));
   }
 
   Future<String> _formatLastScan(List<String> paths) async {

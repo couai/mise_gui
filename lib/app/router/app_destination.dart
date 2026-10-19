@@ -31,7 +31,7 @@ enum AppDestination {
   ),
   projects(
     label: '项目',
-    description: '项目覆盖',
+    description: '项目环境与快速打开',
     path: '/projects',
     icon: Icons.workspaces_outline,
     selectedIcon: Icons.workspaces_rounded,

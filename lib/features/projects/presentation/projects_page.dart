@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mise_gui/app/bootstrap/dependencies.dart';
 import 'package:mise_gui/app/theme/app_theme.dart';
 import 'package:mise_gui/features/dashboard/application/dashboard_provider.dart';
@@ -368,8 +369,8 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage> {
       value: coverageValue,
       builder: (snapshot) {
         return AppPageScaffold(
-          title: '项目覆盖',
-          description: '管理扫描目录，只显示覆盖了全局版本的项目和版本差异。',
+          title: '项目工作台',
+          description: '识别项目技术栈、核对开发环境，沿用项目版本与分类目录。',
           actions: [
             FilledButton.icon(
               onPressed: _handleRefresh,
@@ -439,6 +440,8 @@ class _ProjectCoverageLayout extends StatelessWidget {
     return Column(
       children: [
         _ProjectsAutoRefresh(paths: watchPaths),
+        _ProjectWorkbenchPanel(projects: snapshot.projects),
+        const SizedBox(height: 20),
         LayoutBuilder(
           builder: (context, constraints) {
             final stacked = constraints.maxWidth < 1180;
@@ -488,6 +491,124 @@ class _ProjectCoverageLayout extends StatelessWidget {
           },
         ),
       ],
+    );
+  }
+}
+
+class _ProjectWorkbenchPanel extends StatefulWidget {
+  const _ProjectWorkbenchPanel({required this.projects});
+  final List<ProjectRecord> projects;
+  @override
+  State<_ProjectWorkbenchPanel> createState() => _ProjectWorkbenchPanelState();
+}
+
+class _ProjectWorkbenchPanelState extends State<_ProjectWorkbenchPanel> {
+  String query = '';
+  @override
+  Widget build(BuildContext context) {
+    final projects = widget.projects
+        .where(
+          (p) => '${p.name} ${p.path} ${p.environment}'.toLowerCase().contains(
+            query.toLowerCase(),
+          ),
+        )
+        .toList();
+    return AppPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '项目环境 · ${widget.projects.length}',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            '识别 Java、Node / Vue / TypeScript、Python、Go、Rust、Flutter 等项目。只读取声明文件，不运行项目脚本。',
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            onChanged: (value) => setState(() => query = value),
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.search),
+              hintText: '搜索项目、技术栈或路径',
+            ),
+          ),
+          const SizedBox(height: 14),
+          if (projects.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('暂无匹配项目；添加代码所在的扫描目录后重新扫描。'),
+            ),
+          LayoutBuilder(
+            builder: (context, constraints) => Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                for (final p in projects)
+                  SizedBox(
+                    width: constraints.maxWidth > 800
+                        ? (constraints.maxWidth - 12) / 2
+                        : constraints.maxWidth,
+                    child: Card(
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => context.go(
+                          Uri(
+                            path: '/projects/environment',
+                            queryParameters: {'path': p.path},
+                          ).toString(),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.folder_outlined),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      p.name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                  const Icon(Icons.arrow_forward, size: 18),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                p.environment,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                p.path,
+                                style: Theme.of(context).textTheme.bodySmall,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                p.hasOverrideRisk
+                                    ? '${p.overrideCount} 项项目版本覆盖 · 查看环境'
+                                    : '查看版本要求与本地工具',
+                                style: Theme.of(context).textTheme.labelMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -611,7 +732,7 @@ class _ScanDirectoriesHeader extends StatelessWidget {
             Text('扫描范围', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
-              '添加工作区目录后，应用会在其中查找 mise 项目和项目级版本覆盖。',
+              '添加工作区目录后，应用会在其中查找项目声明文件和项目级版本覆盖。',
               style: TextStyle(color: colors.textMuted, height: 1.45),
             ),
           ],
@@ -953,8 +1074,8 @@ class _DirectoryProjectDetails extends StatelessWidget {
         ),
         subtitle: Text(
           overrideProjectCount > 0
-              ? '$projectCount 个 mise 项目，$overrideProjectCount 个存在覆盖'
-              : '$projectCount 个 mise 项目，暂无版本覆盖',
+              ? '$projectCount 个项目，$overrideProjectCount 个存在覆盖'
+              : '$projectCount 个项目，暂无版本覆盖',
           style: TextStyle(
             color: overrideProjectCount > 0 ? colors.warning : colors.textMuted,
             fontSize: 12,
@@ -1035,11 +1156,11 @@ class _DirectoryScanSummary {
 
     if (overrideProjectCount > 0) {
       return _DirectoryScanSummary._warning(
-        '发现 $projectCount 个 mise 项目，其中 $overrideProjectCount 个存在版本覆盖。',
+        '发现 $projectCount 个项目，其中 $overrideProjectCount 个存在版本覆盖。',
       );
     }
 
-    return _DirectoryScanSummary._healthy('发现 $projectCount 个 mise 项目，暂无版本覆盖。');
+    return _DirectoryScanSummary._healthy('发现 $projectCount 个项目，暂无版本覆盖。');
   }
 
   const _DirectoryScanSummary._paused()
@@ -1132,6 +1253,16 @@ class _ScannedProjectRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
+          IconButton(
+            tooltip: '查看项目环境',
+            onPressed: () => context.go(
+              Uri(
+                path: '/projects/environment',
+                queryParameters: {'path': project.path},
+              ).toString(),
+            ),
+            icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+          ),
           IconButton(
             tooltip: '复制路径',
             onPressed: () async {

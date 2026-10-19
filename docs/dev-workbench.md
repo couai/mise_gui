@@ -37,6 +37,8 @@ DevWorkbench 在原 Mise GUI fork 上扩展本地工具管理。首页保留“�
 
 ## 数据和边界
 
+项目发现、技术栈档案、项目环境对照与快速打开见 [项目工作台](projects.md)。项目版本固定仍由分类 mise 策略执行，项目依赖保留在项目目录。
+
 - `LocalToolInventory.scan()` 返回工具、状态、时间和局部警告；页面不执行探测命令。分类、搜索和详情使用同一份快照。
 - 运行时复用 `ClassifiedToolchainService` 的真实 mise 清单，显示全局选择、所有已安装版本及真实 SDK 路径。Dart 从 Flutter 的配套 SDK 读取；Rust 显示 rustup 的实际工具链路径。
 - GUI 读取 `/Applications` 下的应用包元数据；命令从登录 Shell 环境、分类目录和系统路径解析。CLI 版本输出与 GUI 元数据分别核对；mitmproxy 的 `0.0.0` 包元数据用实际 CLI 版本补齐。

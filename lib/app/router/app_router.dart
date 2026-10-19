@@ -11,6 +11,7 @@ import 'package:mise_gui/app/shell/app_shell.dart';
 import 'package:mise_gui/features/config/presentation/config_page.dart';
 import 'package:mise_gui/features/dashboard/presentation/dashboard_page.dart';
 import 'package:mise_gui/features/projects/presentation/projects_page.dart';
+import 'package:mise_gui/features/projects/presentation/project_environment_page.dart';
 import 'package:mise_gui/features/tools/presentation/tools_page.dart';
 
 final rootNavigatorKeyProvider = Provider<GlobalKey<NavigatorState>>(
@@ -81,6 +82,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppDestination.projects.path,
                 builder: (context, state) => const ProjectsPage(),
+                routes: [
+                  GoRoute(
+                    path: 'environment',
+                    builder: (context, state) => ProjectEnvironmentPage(
+                      key: ValueKey(state.uri.queryParameters['path']),
+                      projectPath: state.uri.queryParameters['path'] ?? '',
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

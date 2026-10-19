@@ -99,6 +99,25 @@ final miseQueryServiceProvider = Provider<MiseQueryService>(
   (ref) => CliMiseQueryService(ref.watch(miseProcessServiceProvider)),
 );
 
+/// Project discovery and inspection stay offline even when installs allow network.
+final projectMiseQueryServiceProvider = Provider<MiseQueryService>((ref) {
+  final settings = ref.watch(managerSettingsProvider);
+  return CliMiseQueryService(
+    LocalMiseProcessService(
+      executablePath: settings.miseExecutable.isEmpty
+          ? null
+          : settings.miseExecutable,
+      environmentOverrides: {
+        ...settings.environment,
+        'MISE_OFFLINE': '1',
+        'MISE_AUTO_INSTALL': '0',
+        'MISE_NOT_FOUND_AUTO_INSTALL': '0',
+        'RUSTUP_AUTO_INSTALL': '0',
+      },
+    ),
+  );
+});
+
 final classifiedToolchainServiceProvider = Provider<ClassifiedToolchainService>(
   (ref) => ClassifiedToolchainService(
     ref.watch(miseProcessServiceProvider),
@@ -139,8 +158,9 @@ final configWatchServiceProvider = Provider<ConfigWatchService>(
 );
 
 final projectScanServiceProvider = Provider<ProjectScanService>(
-  (ref) =>
-      LiveProjectScanService(queryService: ref.watch(miseQueryServiceProvider)),
+  (ref) => LiveProjectScanService(
+    queryService: ref.watch(projectMiseQueryServiceProvider),
+  ),
 );
 
 final scanDirectoryServiceProvider = Provider<ScanDirectoryService>(

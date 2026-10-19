@@ -35,6 +35,7 @@ class AppShell extends ConsumerWidget {
         destination != AppDestination.localTools &&
         destination != AppDestination.dashboard &&
         destination != AppDestination.storage &&
+        destination != AppDestination.projects &&
         destination != AppDestination.tasks &&
         destination != AppDestination.maintenance &&
         destination != AppDestination.managers;
