@@ -22,6 +22,8 @@
 #   NOTARY_PROFILE
 #     可选。覆盖 `xcrun notarytool` 使用的钥匙串 profile 名称。
 #     默认值：mise-gui-notary。
+#   EXTERNAL_OUTPUT_DIR
+#     可选。额外复制应用到指定目录；默认仅输出 dist/macos/。
 #
 # 输出产物：
 #   dist/macos/DevWorkbench.app
@@ -30,8 +32,7 @@ set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/macos_package_common.sh"
 
 FINAL_APP_DIR="$DIST_DIR/${APP_NAME}.app"
-EXTERNAL_OUTPUT_DIR="/Users/likai/Documents/DevWorkbench Build"
-EXTERNAL_APP_DIR="$EXTERNAL_OUTPUT_DIR/${APP_NAME}.app"
+EXTERNAL_OUTPUT_DIR="${EXTERNAL_OUTPUT_DIR:-}"
 TMP_DIR="$(mktemp -d /tmp/mise-gui-app-release.XXXXXX)"
 STAGE_DIR="$TMP_DIR/stage"
 APP_PATH="$STAGE_DIR/$APP_NAME.app"
@@ -61,8 +62,11 @@ fi
 
 cp -R "$APP_PATH" "$FINAL_APP_DIR"
 
-mkdir -p "$EXTERNAL_OUTPUT_DIR"
-rm -rf "$EXTERNAL_APP_DIR"
-cp -R "$APP_PATH" "$EXTERNAL_APP_DIR"
+if [[ -n "$EXTERNAL_OUTPUT_DIR" ]]; then
+  EXTERNAL_APP_DIR="$EXTERNAL_OUTPUT_DIR/${APP_NAME}.app"
+  mkdir -p "$EXTERNAL_OUTPUT_DIR"
+  rm -rf "$EXTERNAL_APP_DIR"
+  cp -R "$APP_PATH" "$EXTERNAL_APP_DIR"
+fi
 
 echo "$FINAL_APP_DIR"

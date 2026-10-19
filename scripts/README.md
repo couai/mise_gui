@@ -2,6 +2,10 @@
 
 这个目录下是桌面端打包脚本。根目录已经加了 `package.json`，可以直接通过 `npm run` 调用，不需要记具体脚本文件名。
 
+项目声明使用 npm 11.19.0，本机验证环境为 Node.js 24.21.0。npm 11.19.0 自带的 Node 版本约束为 `^20.17.0 || >=22.9.0`；现有 CI 配置使用 Node 24，符合该约束。`packageManager` 是版本声明，普通 `npm run` 不负责安装或切换 npm。脚本只使用 Node 内置模块、Bash 与系统打包工具，没有 npm 项目依赖，无需为运行这些入口执行 `npm install`。
+
+DMG 背景图和图标脚本还需要当前 Python 环境提供 Pillow；npm 不管理该依赖。若基础 Python 未安装 Pillow，可从含 Pillow 的项目虚拟环境运行，或临时使用 `uv run --no-project --with Pillow python scripts/generate_macos_dmg_background.py`，沿用 uv 的分类缓存目录。
+
 ## 常用命令
 
 ```bash
@@ -70,6 +74,8 @@ npm run macos:release:dmg
   覆盖默认签名证书。不传时会自动选择第一个可用的 `Developer ID Application`
 - `NOTARY_PROFILE`
   覆盖 `xcrun notarytool` 使用的 keychain profile，默认是 `mise-gui-notary`
+- `EXTERNAL_OUTPUT_DIR`
+  可选。macOS release app 打包完成后，额外复制 `DevWorkbench.app` 到该目录；默认仅输出 `dist/macos/`，不再写上游作者的固定用户目录
 - `SKIP_NOTARIZATION`
   只在对应的 `:skip-notarization` npm script 里预先设置为 `1`
 - `SKIP_CODESIGN`
@@ -88,3 +94,7 @@ dist/macos/
 dist/windows/
 dist/linux/
 ```
+
+## npm 11.19.0 兼容性核对
+
+2026-10-19，Node 24.21.0 / npm 11.19.0：7 个 Bash、3 个 Node ESM、2 个 Python 文件语法检查通过。临时源码副本中的 12 个 npm 入口完成运行验证，3 个 Windows/Linux 入口在 macOS 按预期触发平台保护；构建、签名、公证与 DMG 创建使用替身，真实 PNG、ZIP/tar.gz 内容和可选导出目录另行核对。版本发布脚本只验证 `--help`，没有触发 tag 或远端发布。详细范围见 [验证记录](../docs/project-diagnostics-1.7.0.md)。

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Mise GUI packaging script entrypoints",
-  "packageManager": "npm@10.8.2",
+  "packageManager": "npm@11.19.0",
   "scripts": {
     "help": "cat ./scripts/README.md",
     "macos:dmg:background": "python3 ./scripts/generate_macos_dmg_background.py",
