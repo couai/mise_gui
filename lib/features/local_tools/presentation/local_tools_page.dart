@@ -419,85 +419,85 @@ class _LocalToolsPageState extends ConsumerState<LocalToolsPage> {
               child: Scrollbar(
                 controller: catalogScroll,
                 thumbVisibility: true,
-                child: ListView(
+                child: ListView.builder(
                   controller: catalogScroll,
                   itemExtent: itemExtent,
                   padding: EdgeInsets.zero,
-                  children: [
-                    for (final tool in visible)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 5),
-                        child: Material(
-                          color: selected?.id == tool.id
-                              ? colors.accent.withValues(alpha: .10)
-                              : Colors.transparent,
+                  itemCount: visible.length,
+                  itemBuilder: (context, index) {
+                    final tool = visible[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 5),
+                      child: Material(
+                        color: selected?.id == tool.id
+                            ? colors.accent.withValues(alpha: .10)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        child: InkWell(
+                          key: ValueKey('local-tool-${tool.id}'),
                           borderRadius: BorderRadius.circular(12),
-                          child: InkWell(
-                            key: ValueKey('local-tool-${tool.id}'),
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: () {
-                              setState(() => selectedId = tool.id);
-                              _syncRoute();
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 13,
-                              ),
-                              child: Row(
-                                children: [
-                                  ToolLogo(tool: tool.id, size: 30),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          tool.name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                          onTap: () {
+                            setState(() => selectedId = tool.id);
+                            _syncRoute();
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 13,
+                            ),
+                            child: Row(
+                              children: [
+                                ToolLogo(tool: tool.id, size: 30),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        tool.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          tool.version ??
-                                              (tool.versions.isEmpty
-                                                  ? tool.statusLabel
-                                                  : '${tool.versions.length} 个版本'),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            color: colors.textMuted,
-                                            fontSize: 12,
-                                          ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        tool.version ??
+                                            (tool.versions.isEmpty
+                                                ? tool.statusLabel
+                                                : '${tool.versions.length} 个版本'),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: colors.textMuted,
+                                          fontSize: 12,
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 8),
-                                  Tooltip(
-                                    message: tool.statusLabel,
-                                    child: Icon(
-                                      tool.status == LocalToolStatus.ready
-                                          ? Icons.check_circle_outline
-                                          : Icons.info_outline,
-                                      size: 16,
-                                      color:
-                                          tool.status == LocalToolStatus.ready
-                                          ? colors.accent
-                                          : colors.warning,
-                                    ),
+                                ),
+                                const SizedBox(width: 8),
+                                Tooltip(
+                                  message: tool.statusLabel,
+                                  child: Icon(
+                                    tool.status == LocalToolStatus.ready
+                                        ? Icons.check_circle_outline
+                                        : Icons.info_outline,
+                                    size: 16,
+                                    color: tool.status == LocalToolStatus.ready
+                                        ? colors.accent
+                                        : colors.warning,
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ),
-                  ],
+                    );
+                  },
                 ),
               ),
             ),

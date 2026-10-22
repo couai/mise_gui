@@ -24,7 +24,7 @@ class DashboardPage extends ConsumerStatefulWidget {
 class _DashboardPageState extends ConsumerState<DashboardPage>
     with WidgetsBindingObserver {
   static const _refreshDebounce = Duration(seconds: 1);
-  static const _autoRefreshInterval = Duration(seconds: 60);
+  static const _autoRefreshInterval = Duration(minutes: 5);
 
   DateTime? _lastRefreshAt;
   var _refreshing = false;

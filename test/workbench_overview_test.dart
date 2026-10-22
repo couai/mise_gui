@@ -278,6 +278,46 @@ void main() {
   );
 
   testWidgets(
+    'dashboard spaces automatic scans five minutes apart and still refreshes manually',
+    (tester) async {
+      final inventory = Inventory();
+      await app(tester, inventory);
+      expect(inventory.scans, 1);
+      await tester.pump(const Duration(minutes: 4, seconds: 59));
+      await tester.pumpAndSettle();
+      expect(inventory.scans, 1);
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      expect(inventory.scans, 2);
+      await tester.tap(find.text('刷新环境数据'));
+      await tester.pumpAndSettle();
+      expect(inventory.scans, 3);
+    },
+  );
+
+  testWidgets('dashboard does not scan while hidden or app is inactive', (
+    tester,
+  ) async {
+    final inventory = Inventory();
+    final container = await app(tester, inventory);
+    container.read(appRouterProvider).go('/local-tools');
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(minutes: 6));
+    await tester.pumpAndSettle();
+    expect(inventory.scans, 1);
+    container.read(appRouterProvider).go('/dashboard');
+    await tester.pumpAndSettle();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump(const Duration(minutes: 6));
+    await tester.pumpAndSettle();
+    expect(inventory.scans, 1);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump(const Duration(minutes: 5));
+    await tester.pumpAndSettle();
+    expect(inventory.scans, 2);
+  });
+
+  testWidgets(
     'overview remains usable without mise and supports a narrow window',
     (tester) async {
       await app(tester, Inventory(), mise: false, size: const Size(430, 950));

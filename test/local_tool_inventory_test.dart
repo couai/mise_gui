@@ -13,6 +13,8 @@ class Probe implements LocalToolProcess {
   final calls = <(String, List<String>)>[];
   final results = <String, LocalCommandResult>{};
   final environments = <Map<String, String>>[];
+  Duration delay = Duration.zero;
+  int running = 0, maximumRunning = 0;
   @override
   Future<LocalCommandResult> run(
     String executable,
@@ -23,7 +25,14 @@ class Probe implements LocalToolProcess {
   }) async {
     calls.add((executable, arguments));
     environments.add(environment);
-    return results[executable] ?? const LocalCommandResult(1, '', '');
+    running++;
+    if (running > maximumRunning) maximumRunning = running;
+    try {
+      if (delay != Duration.zero) await Future<void>.delayed(delay);
+      return results[executable] ?? const LocalCommandResult(1, '', '');
+    } finally {
+      running--;
+    }
   }
 }
 
@@ -63,6 +72,19 @@ void main() {
       return versions;
     },
   ).scan();
+
+  test('inventory limits simultaneous probes without dropping tools', () async {
+    probe.delay = const Duration(milliseconds: 20);
+    for (final name in ['gh', 'wget', 'git', 'uv']) {
+      await binary('${temp.path}/bin/$name');
+    }
+    final result = await scan();
+    expect(probe.maximumRunning, 1);
+    expect(
+      result.tools.map((tool) => tool.id),
+      containsAll(['gh', 'wget', 'git', 'uv']),
+    );
+  });
 
   test(
     'discovers real CLI evidence, keeps source separate, and never creates tool folders',

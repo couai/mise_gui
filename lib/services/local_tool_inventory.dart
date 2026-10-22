@@ -62,7 +62,7 @@ class SystemLocalToolInventory implements LocalToolInventory {
         '${v.rustSdkPath ?? v.actualPath}/bin',
     ];
     var next = 0;
-    // Four workers cap filesystem/process pressure; each command has a deadline.
+    // Probe sequentially so large CLI runtimes do not overlap in memory.
     Future<void> worker() async {
       while (next < specs.length) {
         final index = next++;
@@ -81,7 +81,7 @@ class SystemLocalToolInventory implements LocalToolInventory {
       }
     }
 
-    await Future.wait(List.generate(4, (_) => worker()));
+    await worker();
     final imported = <LocalTool>[];
     try {
       imported.addAll(await registry?.scan() ?? []);

@@ -31,6 +31,7 @@
 - “项目工作台”识别 Java、Node / Vue / TS、Python、Go、Rust、Flutter 等项目，核对版本要求与实际环境，固定已安装的项目 SDK，并快速打开 IDE、终端和接口集合目录；见 [项目约定](docs/projects.md)。
 - 五阶段完成范围、实际验收、已复现问题及后续优先级见 [功能验收报告](docs/feature-audit-2026-10-19.md)。
 - 1.7.0 增加项目 npm/pnpm 离线版本核对、Python 虚拟环境和 Maven／Gradle 多模块诊断；见 [诊断验证](docs/project-diagnostics-1.7.0.md)。1.6.1 的稳定性修复继续保留。
+- 1.7.1 减少自动扫描频率、串行执行工具探测并按需构建工具列表，降低运行时资源占用；手动刷新保留，见 [工具工作台约定](docs/dev-workbench.md)。
 - 应用配置与历史放在 `$HOME/Developer/toolchains/mise-gui/`。全局配置、缓存和运行时沿用已有 mise 环境。
 - [工具工作台设计与边界](docs/dev-workbench.md) · [分类安装策略](docs/classified-toolchains.md) · [实际 Flutter 页面预览](docs/design/README.md)
 - [代码与上游 Issues 检查记录](docs/bug-audit-2026-10-18.md)
@@ -40,7 +41,7 @@ mise exec -- flutter pub get
 mise exec -- flutter run -d macos
 ```
 
-验证使用 `flutter analyze`、`flutter test`、`dart run tool/check_environment.dart`、`dart run tool/check_local_tools.dart`。macOS 1.7.0 下载与安装说明见 [发布说明](docs/releases/v1.7.0.md)；此包使用 ad-hoc 本地签名，没有 Apple Developer ID 签名或公证。
+验证使用 `flutter analyze`、`flutter test`、`dart run tool/check_environment.dart`、`dart run tool/check_local_tools.dart`。macOS 1.7.1 下载与安装说明见 [发布说明](docs/releases/v1.7.1.md)；此包使用 ad-hoc 本地签名，没有 Apple Developer ID 签名或公证。
 
 本地 Release 构建使用 `bash scripts/build_local_macos.sh`，构建后刷新内嵌框架及应用的临时签名并进行校验。
 
